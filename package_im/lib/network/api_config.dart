@@ -12,7 +12,18 @@ class ApiConfig {
   // 发送超时时间（毫秒）
   static const int sendTimeout = 10000;
   
-  // WebSocket地址
+  // ==================== WebSocket 配置 ====================
+  // WebSocket地址配置说明：
+  // 1. 使用 wss:// 协议（安全的WebSocket）
+  // 2. 需要指定正确的端口号
+  // 3. 路径会在连接时添加：/ws/chat?token=xxx
+  //
+  // 常见配置：
+  // - 与HTTPS同端口：'wss://niumowangai.top:443'
+  // - 独立端口8080：'wss://niumowangai.top:8080'
+  // - 无需端口（使用默认）：'wss://niumowangai.top'
+  //
+  // ⚠️ 请根据后端实际配置修改
   static const String wsBaseUrl = 'wss://niumowangai.top';
   
   // API接口路径

@@ -59,6 +59,7 @@ class WebSocketManager {
   final int _maxReconnectAttempts = 5;
   final Duration _reconnectDelay = const Duration(seconds: 3);
   final Duration _heartbeatInterval = const Duration(seconds: 30);
+  bool _enableHeartbeat = false;  // 保存心跳配置
 
   // 消息流控制器
   final StreamController<WebSocketMessage> _messageController =
@@ -90,10 +91,12 @@ class WebSocketManager {
   /// [url] WebSocket地址，如果为空则使用默认配置
   /// [headers] 请求头
   /// [autoReconnect] 是否自动重连
+  /// [enableHeartbeat] 是否启用心跳（默认关闭，因为某些后端不支持）
   Future<void> connect({
     String? url,
     Map<String, dynamic>? headers,
     bool autoReconnect = true,
+    bool enableHeartbeat = false,
   }) async {
     if (_status == WebSocketStatus.connected ||
         _status == WebSocketStatus.connecting) {
@@ -103,6 +106,7 @@ class WebSocketManager {
 
     _url = url ?? ApiConfig.wsBaseUrl;
     _headers = headers;
+    _enableHeartbeat = enableHeartbeat;  // 保存心跳配置用于重连
 
     try {
       _updateStatus(WebSocketStatus.connecting);
@@ -132,8 +136,13 @@ class WebSocketManager {
         cancelOnError: false,
       );
 
-      // 启动心跳
-      _startHeartbeat();
+      // 启动心跳（如果启用）
+      if (enableHeartbeat) {
+        _startHeartbeat();
+        debugPrint('⚠️  心跳已启用，请确保后端支持心跳包');
+      } else {
+        debugPrint('ℹ️  心跳已禁用（推荐）');
+      }
     } catch (e) {
       debugPrint('WebSocket连接失败: $e');
       _updateStatus(WebSocketStatus.error);
@@ -308,6 +317,7 @@ class WebSocketManager {
           url: _url,
           headers: _headers,
           autoReconnect: true,
+          enableHeartbeat: _enableHeartbeat,  // 使用保存的心跳配置
         );
       }
     });

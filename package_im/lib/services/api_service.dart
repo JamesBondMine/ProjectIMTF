@@ -821,10 +821,11 @@ class ApiService {
         _handleWebSocketMessage(wsMessage);
       });
 
-      // 连接 WebSocket
+      // 连接 WebSocket（禁用心跳，避免与后端消息格式冲突）
       await _webSocketManager.connect(
         url: wsUrl,
         autoReconnect: true,
+        enableHeartbeat: false,  // 禁用心跳包
       );
 
       // 等待连接成功（最多5秒）

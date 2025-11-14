@@ -218,7 +218,7 @@ class _ChatListPageState extends State<ChatListPage> {
           ),
           // 搜索好友按钮
           IconButton(
-            icon: const Icon(Icons.person_add),
+            icon: const Icon(Icons.add),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
