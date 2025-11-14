@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'home_page.dart';
 import 'agreement_page.dart';
+import '../services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -17,6 +18,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailController = TextEditingController();
+  final _apiService = ApiService();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isAgreed = false;
@@ -65,36 +67,56 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
 
-      // 显示加载提示
-      EasyLoading.show(status: '注册中...');
-
-      // 模拟注册请求
-      await Future.delayed(const Duration(seconds: 2));
-
-      // 关闭加载提示
-      EasyLoading.dismiss();
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // 显示注册成功提示
-        EasyLoading.showSuccess('注册成功！');
-
-        // 延迟一下再跳转，让用户看到成功提示
-        await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        // 调用真实的注册API
+        final response = await _apiService.register(
+          username: _accountController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          nickname: '', // 可选
+          phone: '', // 可选
+        );
 
         if (mounted) {
-          // 注册成功，跳转到主页
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => HomePage(
-                username: _accountController.text,
-              ),
-            ),
-            (route) => false, // 清除所有路由栈
-          );
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (response.success && response.data != null) {
+            // 注册成功（已自动登录）
+            EasyLoading.showSuccess('注册成功！');
+
+            // 延迟一下再跳转
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            if (mounted) {
+              // 跳转到主页
+              String displayName = response.data!.user.nickname.isNotEmpty
+                  ? response.data!.user.nickname
+                  : response.data!.user.username;
+
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => HomePage(
+                    username: displayName,
+                  ),
+                ),
+                (route) => false, // 清除所有路由栈
+              );
+            }
+          } else {
+            // 注册失败，显示错误信息
+            EasyLoading.showError(response.message.isNotEmpty
+                ? response.message
+                : '注册失败，请重试');
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          // 异常已经在HttpManager中处理并显示
         }
       }
     }

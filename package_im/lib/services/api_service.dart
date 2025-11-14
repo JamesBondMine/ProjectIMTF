@@ -127,25 +127,48 @@ class ApiService {
   /// [username] 用户名
   /// [email] 邮箱
   /// [password] 密码
-  Future<ApiResponse<dynamic>> register({
+  /// [nickname] 昵称（可选）
+  /// [phone] 手机号（可选）
+  Future<ApiResponse<LoginResponseData>> register({
     required String username,
     required String email,
     required String password,
+    String? nickname,
+    String? phone,
   }) async {
     try {
       debugPrint('开始注册: $email');
 
-      final response = await _httpManager.post(
+      final response = await _httpManager.post<LoginResponseData>(
         ApiConfig.registerPath,
         data: {
           'username': username,
           'email': email,
           'password': password,
+          'nickname': nickname ?? '',
+          'phone': phone ?? '',
         },
         showLoading: true,
+        fromJson: (json) => LoginResponseData.fromJson(json),
       );
 
       debugPrint('注册响应: $response');
+
+      if (response.success && response.data != null) {
+        // 注册成功后自动保存Token和用户信息（相当于自动登录）
+        _token = response.data!.token;
+        _currentUser = response.data!.user;
+        _httpManager.setToken(_token!);
+
+        // 保存到本地存储
+        await _storageManager.saveToken(_token!);
+        await _storageManager.saveUserInfo(_currentUser!.toJson());
+        await _storageManager.setLoggedIn(true);
+
+        debugPrint('注册成功并已自动登录: ${_currentUser?.nickname}');
+        debugPrint('Token: $_token');
+        debugPrint('数据已保存到本地存储');
+      }
 
       return response;
     } catch (e) {

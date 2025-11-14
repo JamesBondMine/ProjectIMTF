@@ -17,7 +17,7 @@ class ApiConfig {
   
   // API接口路径
   static const String loginPath = '/api/auth/login';
-  static const String registerPath = '/auth/register';
+  static const String registerPath = '/api/auth/register';
   static const String logoutPath = '/auth/logout';
   static const String userInfoPath = '/user/info';
   static const String uploadPath = '/upload/file';
