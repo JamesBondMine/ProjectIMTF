@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
 
@@ -13,6 +14,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final _apiService = ApiService();
+  final _imagePicker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
@@ -35,25 +37,53 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: Column(
                 children: [
-                  // 头像
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    backgroundImage: user?.avatarUrl != null
-                        ? NetworkImage(user!.avatarUrl!)
-                        : null,
-                    child: user?.avatarUrl == null
-                        ? Text(
-                            user?.nickname.isNotEmpty == true
-                                ? user!.nickname[0].toUpperCase()
-                                : user?.username[0].toUpperCase() ?? '?',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                  // 头像（可点击上传）
+                  GestureDetector(
+                    onTap: _showAvatarOptions,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          backgroundImage: user?.avatarUrl != null
+                              ? NetworkImage(user!.avatarUrl!)
+                              : null,
+                          child: user?.avatarUrl == null
+                              ? Text(
+                                  user?.nickname.isNotEmpty == true
+                                      ? user!.nickname[0].toUpperCase()
+                                      : user?.username[0].toUpperCase() ?? '?',
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        // 相机图标
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
                             ),
-                          )
-                        : null,
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   // 昵称
@@ -219,34 +249,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// 获取用户类型文本
-  String _getUserTypeText(String? userType) {
-    switch (userType) {
-      case 'NORMAL':
-        return '普通用户';
-      case 'VIP':
-        return 'VIP用户';
-      case 'ADMIN':
-        return '管理员';
-      default:
-        return '未知';
-    }
-  }
-
-  /// 获取状态文本
-  String _getStatusText(String? status) {
-    switch (status) {
-      case 'ACTIVE':
-        return '正常';
-      case 'INACTIVE':
-        return '未激活';
-      case 'BANNED':
-        return '已封禁';
-      default:
-        return '未知';
-    }
-  }
-
   /// 显示关于对话框
   void _showAboutDialog() {
     showDialog(
@@ -272,6 +274,100 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  /// 显示头像选项
+  void _showAvatarOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('拍照'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('从相册选择'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('取消'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 选择图片
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image == null) {
+        return;
+      }
+
+      // 上传图片
+      await _uploadAvatar(image.path);
+    } catch (e) {
+      EasyLoading.showError('选择图片失败: $e');
+    }
+  }
+
+  /// 上传头像
+  Future<void> _uploadAvatar(String filePath) async {
+    try {
+      EasyLoading.show(status: '上传中...');
+
+      // 1. 上传文件获取URL
+      final uploadResult = await _apiService.uploadSingleFile(filePath);
+
+      if (!uploadResult.success || uploadResult.data == null) {
+        EasyLoading.showError('上传失败');
+        return;
+      }
+
+      String avatarUrl = uploadResult.data!;
+      
+      // 2. 使用URL更新用户信息
+      final updateResult = await _apiService.updateUserInfo(
+        avatarUrl: avatarUrl,
+      );
+
+      if (updateResult.success) {
+        EasyLoading.showSuccess('头像更新成功');
+        
+        // 3. 刷新UI
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        EasyLoading.showError('头像更新失败');
+      }
+    } catch (e) {
+      EasyLoading.showError('上传失败: $e');
+    }
   }
 
   /// 显示退出登录对话框

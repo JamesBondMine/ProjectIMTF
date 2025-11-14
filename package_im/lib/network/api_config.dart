@@ -24,6 +24,15 @@ class ApiConfig {
   static const String forgotPasswordPath = '/auth/forgot-password';
   static const String resetPasswordPath = '/auth/reset-password';
   
+  // 获取当前用户信息
+  static const String getUserInfoPath = '/api/auth/me';
+  
+  // 更新用户信息
+  static const String updateUserInfoPath = '/api/auth/profile';
+  
+  // 文件上传
+  static const String uploadSingleFilePath = '/api/files/upload/single';
+  
   // 请求头
   static Map<String, dynamic> get headers => {
         'Content-Type': 'application/json',

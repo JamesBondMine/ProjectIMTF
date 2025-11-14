@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../network/http_manager.dart';
 import '../network/api_config.dart';
@@ -260,6 +261,140 @@ class ApiService {
       return response;
     } catch (e) {
       debugPrint('重置密码失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取当前用户信息（从服务器）
+  Future<ApiResponse<User>> getCurrentUserInfo() async {
+    try {
+      debugPrint('获取当前用户信息');
+      
+      final response = await _httpManager.get<User>(
+        ApiConfig.getUserInfoPath,
+        showLoading: false,
+        fromJson: (json) => User.fromJson(json),
+      );
+      
+      if (response.success && response.data != null) {
+        // 更新内存中的用户信息
+        _currentUser = response.data;
+        
+        // 保存到本地
+        await _storageManager.saveUserInfo(response.data!.toJson());
+        
+        debugPrint('获取用户信息成功: ${_currentUser!.nickname}');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('获取用户信息异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 更新用户信息
+  Future<ApiResponse<User>> updateUserInfo({
+    String? nickname,
+    String? email,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    try {
+      debugPrint('更新用户信息');
+      
+      // 构建请求参数
+      Map<String, dynamic> params = {};
+      if (nickname != null) params['nickname'] = nickname;
+      if (email != null) params['email'] = email;
+      if (phone != null) params['phone'] = phone;
+      if (avatarUrl != null) params['avatarUrl'] = avatarUrl;
+      
+      final response = await _httpManager.put(
+        ApiConfig.updateUserInfoPath,
+        data: params,
+        showLoading: true,
+      );
+      
+      // 根据返回格式解析数据
+      if (response.data != null) {
+        User updatedUser;
+        
+        // 检查返回格式，如果有 success 字段，说明是嵌套的格式
+        if (response.data is Map && response.data['success'] == true) {
+          updatedUser = User.fromJson(response.data['data']);
+        } else {
+          // 直接是用户数据
+          updatedUser = User.fromJson(response.data);
+        }
+        
+        // 更新内存中的用户信息
+        _currentUser = updatedUser;
+        
+        // 保存到本地
+        await _storageManager.saveUserInfo(updatedUser.toJson());
+        
+        debugPrint('更新用户信息成功: ${_currentUser!.nickname}');
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: updatedUser,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: null,
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('更新用户信息异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 上传单个文件
+  Future<ApiResponse<String>> uploadSingleFile(String filePath) async {
+    try {
+      debugPrint('上传文件: $filePath');
+      
+      // 将字符串路径转换为File对象
+      final file = File(filePath);
+      
+      final response = await _httpManager.uploadFile(
+        ApiConfig.uploadSingleFilePath,
+        file,
+        showLoading: true,
+      );
+      
+      if (response.success && response.data != null) {
+        // 假设返回的是 { url: "..." } 格式
+        String? fileUrl;
+        if (response.data is Map) {
+          fileUrl = response.data['url']?.toString();
+        } else {
+          fileUrl = response.data.toString();
+        }
+        
+        debugPrint('文件上传成功: $fileUrl');
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: fileUrl ?? '',
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: '',
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('文件上传异常: $e');
       rethrow;
     }
   }
