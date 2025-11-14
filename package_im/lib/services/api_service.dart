@@ -428,6 +428,35 @@ class ApiService {
     }
   }
 
+  /// 获取用户信息（通过用户ID）
+  Future<ApiResponse<User>> getUserById(int userId) async {
+    try {
+      debugPrint('获取用户信息: userId=$userId');
+      
+      final response = await _httpManager.get<User>(
+        ApiConfig.getUserByIdPath(userId),
+        showLoading: false,
+        fromJson: (json) {
+          // 如果返回格式是 { success: true, data: {...} }
+          if (json is Map && json['success'] == true && json['data'] != null) {
+            return User.fromJson(json['data']);
+          }
+          // 否则直接解析
+          return User.fromJson(json);
+        },
+      );
+      
+      if (response.success && response.data != null) {
+        debugPrint('获取用户信息成功: ${response.data!.username}');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('获取用户信息异常: $e');
+      rethrow;
+    }
+  }
+
   /// 添加好友
   Future<ApiResponse<dynamic>> addFriend({
     required int friendId,

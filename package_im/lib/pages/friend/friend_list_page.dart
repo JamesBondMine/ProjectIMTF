@@ -3,6 +3,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 import 'add_friend_page.dart';
+import 'friend_detail_page.dart';
 
 /// 好友列表页面
 class FriendListPage extends StatefulWidget {
@@ -70,6 +71,20 @@ class _FriendListPageState extends State<FriendListPage> {
     );
 
     // 如果添加成功，刷新列表
+    if (result == true) {
+      _loadFriendList();
+    }
+  }
+
+  /// 跳转到好友详情
+  Future<void> _navigateToFriendDetail(User friend) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => FriendDetailPage(friend: friend),
+      ),
+    );
+
+    // 如果从详情页返回且需要刷新（比如删除了好友）
     if (result == true) {
       _loadFriendList();
     }
@@ -339,8 +354,8 @@ class _FriendListPageState extends State<FriendListPage> {
           ],
         ),
         onTap: () {
-          // TODO: 跳转到聊天页面
-          EasyLoading.showInfo('开始聊天功能待开发');
+          // 跳转到好友详情页面
+          _navigateToFriendDetail(friend);
         },
       ),
     );

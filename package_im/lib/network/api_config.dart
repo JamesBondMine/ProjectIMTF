@@ -36,6 +36,9 @@ class ApiConfig {
   // 搜索用户（通过用户名）
   static String searchUserPath(String username) => '/api/auth/user/$username';
   
+  // 获取用户信息（通过用户ID）
+  static String getUserByIdPath(int userId) => '/api/auth/users/$userId';
+  
   // 添加好友
   static const String addFriendPath = '/api/friends';
   
