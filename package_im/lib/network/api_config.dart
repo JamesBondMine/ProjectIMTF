@@ -45,6 +45,15 @@ class ApiConfig {
   // 获取好友列表
   static const String getFriendsPath = '/api/friends';
   
+  // 发送消息
+  static const String sendMessagePath = '/api/chat/messages';
+  
+  // 获取会话列表
+  static const String getConversationsPath = '/api/chat/conversations';
+  
+  // 获取历史消息
+  static String getMessageHistoryPath(int conversationId) => '/api/chat/messages/$conversationId';
+  
   // 请求头
   static Map<String, dynamic> get headers => {
         'Content-Type': 'application/json',

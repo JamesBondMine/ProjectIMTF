@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/user.dart';
+import '../../services/api_service.dart';
 
 /// 聊天页面
 class ChatPage extends StatefulWidget {
   final User friend;
+  final int? conversationId; // 会话ID，用于加载历史消息
 
   const ChatPage({
     super.key,
     required this.friend,
+    this.conversationId,
   });
 
   @override
@@ -18,11 +22,18 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
+  final _apiService = ApiService();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMockMessages();
+    // 如果有conversationId，加载历史消息；否则加载模拟数据
+    if (widget.conversationId != null) {
+      _loadHistoryMessages();
+    } else {
+      _loadMockMessages();
+    }
   }
 
   @override
@@ -30,6 +41,50 @@ class _ChatPageState extends State<ChatPage> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// 加载历史消息
+  Future<void> _loadHistoryMessages() async {
+    if (widget.conversationId == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _apiService.getMessageHistory(widget.conversationId!);
+
+      if (response.success && response.data != null) {
+        final currentUserId = _apiService.currentUser?.id;
+        
+        setState(() {
+          _messages.clear();
+          _messages.addAll(
+            response.data!.map((message) {
+              return ChatMessage(
+                id: message.id.toString(),
+                content: message.content,
+                isSentByMe: message.senderId == currentUserId,
+                timestamp: DateTime.parse(message.createdAt),
+              );
+            }).toList(),
+          );
+        });
+
+        // 滚动到底部
+        _scrollToBottom();
+      } else {
+        if (response.message.isNotEmpty) {
+          EasyLoading.showError(response.message);
+        }
+      }
+    } catch (e) {
+      EasyLoading.showError('加载消息失败: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   /// 加载模拟消息
@@ -65,22 +120,54 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   /// 发送消息
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: text,
-        isSentByMe: true,
-        timestamp: DateTime.now(),
-      ));
-    });
-
+    // 清空输入框
     _messageController.clear();
 
+    // 先添加到本地列表（乐观更新）
+    final tempMessage = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: text,
+      isSentByMe: true,
+      timestamp: DateTime.now(),
+    );
+
+    setState(() {
+      _messages.add(tempMessage);
+    });
+
     // 滚动到底部
+    _scrollToBottom();
+
+    try {
+      // 调用API发送消息
+      final response = await _apiService.sendMessage(
+        receiverId: widget.friend.id,
+        content: text,
+        messageType: 'TEXT',
+      );
+
+      if (!response.success) {
+        // 发送失败，提示用户
+        if (mounted) {
+          EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
+        }
+      } else {
+        debugPrint('消息发送成功: ${response.data?.id}');
+      }
+    } catch (e) {
+      // 发送失败，提示用户
+      if (mounted) {
+        EasyLoading.showError('发送失败: $e');
+      }
+    }
+  }
+
+  /// 滚动到底部
+  void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -164,19 +251,21 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // 消息列表
           Expanded(
-            child: _messages.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      return _buildMessageItem(_messages[index]);
-                    },
-                  ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          return _buildMessageItem(_messages[index]);
+                        },
+                      ),
           ),
           // 输入框
           _buildInputArea(),

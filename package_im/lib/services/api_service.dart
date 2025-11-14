@@ -5,6 +5,8 @@ import '../network/api_config.dart';
 import '../network/api_response.dart';
 import '../models/user.dart';
 import '../models/login_response.dart';
+import '../models/message.dart';
+import '../models/chat_conversation.dart';
 import '../utils/storage_manager.dart';
 
 /// API服务类
@@ -538,6 +540,142 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('获取好友列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 发送消息
+  Future<ApiResponse<Message>> sendMessage({
+    required int receiverId,
+    required String content,
+    String messageType = 'TEXT',
+  }) async {
+    try {
+      debugPrint('发送消息: receiverId=$receiverId, content=$content, messageType=$messageType');
+
+      final response = await _httpManager.post<Message>(
+        ApiConfig.sendMessagePath,
+        data: {
+          'receiverId': receiverId,
+          'content': content,
+          'messageType': messageType,
+        },
+        showLoading: false,
+        fromJson: (json) => Message.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        debugPrint('发送消息成功: ${response.data!.id}');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('发送消息异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取会话列表
+  Future<ApiResponse<List<ChatConversation>>> getConversationList() async {
+    try {
+      debugPrint('获取会话列表');
+
+      final response = await _httpManager.get(
+        ApiConfig.getConversationsPath,
+        showLoading: false,
+      );
+
+      if (response.success && response.data != null) {
+        List<ChatConversation> conversationList = [];
+
+        // 解析会话列表
+        // 返回格式: { success: true, data: { conversations: [...], totalCount: 1 } }
+        if (response.data is Map) {
+          if (response.data['conversations'] is List) {
+            // 格式: data: { conversations: [...] }
+            conversationList = (response.data['conversations'] as List)
+                .map((item) => ChatConversation.fromJson(item))
+                .toList();
+          } else if (response.data['data'] is Map &&
+                     response.data['data']['conversations'] is List) {
+            // 格式: data: { data: { conversations: [...] } }
+            conversationList = (response.data['data']['conversations'] as List)
+                .map((item) => ChatConversation.fromJson(item))
+                .toList();
+          }
+        } else if (response.data is List) {
+          // 直接是数组格式
+          conversationList = (response.data as List)
+              .map((item) => ChatConversation.fromJson(item))
+              .toList();
+        }
+
+        debugPrint('获取会话列表成功，共 ${conversationList.length} 个会话');
+
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: conversationList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: [],
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取会话列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取历史消息
+  Future<ApiResponse<List<Message>>> getMessageHistory(int conversationId) async {
+    try {
+      debugPrint('获取历史消息: conversationId=$conversationId');
+
+      final response = await _httpManager.get(
+        ApiConfig.getMessageHistoryPath(conversationId),
+        showLoading: false,
+      );
+
+      if (response.success && response.data != null) {
+        List<Message> messageList = [];
+
+        // 解析消息列表
+        if (response.data is Map && response.data['messages'] is List) {
+          // 格式: { messages: [...], totalCount: 10 }
+          messageList = (response.data['messages'] as List)
+              .map((item) => Message.fromJson(item))
+              .toList();
+        } else if (response.data is List) {
+          // 直接是数组格式
+          messageList = (response.data as List)
+              .map((item) => Message.fromJson(item))
+              .toList();
+        }
+
+        debugPrint('获取历史消息成功，共 ${messageList.length} 条消息');
+
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: messageList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: [],
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取历史消息异常: $e');
       rethrow;
     }
   }

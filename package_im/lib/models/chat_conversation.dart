@@ -27,13 +27,19 @@ class ChatConversation {
   });
 
   factory ChatConversation.fromJson(Map<String, dynamic> json) {
+    // 兼容两种格式：API返回格式 和 本地存储格式
+    final otherUserId = json['otherUserId']?.toString() ?? json['targetId']?.toString() ?? '';
+    final otherUsername = json['otherUsername'] ?? '';
+    final otherNickname = json['otherNickname'] ?? '';
+    final displayName = otherNickname.isNotEmpty ? otherNickname : otherUsername;
+    
     return ChatConversation(
       id: json['id']?.toString() ?? '',
       userId: json['userId']?.toString() ?? '',
-      targetId: json['targetId']?.toString() ?? '',
-      targetName: json['targetName'] ?? '',
-      targetAvatarUrl: json['targetAvatarUrl'],
-      lastMessage: json['lastMessage'] ?? '',
+      targetId: otherUserId,
+      targetName: displayName.isNotEmpty ? displayName : (json['targetName'] ?? ''),
+      targetAvatarUrl: json['otherAvatarUrl'] ?? json['targetAvatarUrl'],
+      lastMessage: json['lastMessageContent'] ?? json['lastMessage'] ?? '',
       lastMessageTime: json['lastMessageTime'] != null
           ? DateTime.parse(json['lastMessageTime'])
           : DateTime.now(),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/chat_conversation.dart';
+import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../profile/profile_page.dart';
+import 'chat_page.dart';
 
 /// 聊天列表页面
 class ChatListPage extends StatefulWidget {
@@ -30,16 +32,19 @@ class _ChatListPageState extends State<ChatListPage> {
     });
 
     try {
-      // TODO: 调用API获取会话列表
-      // final response = await ApiService().getConversationList();
-      
-      // 模拟延迟
-      await Future.delayed(const Duration(seconds: 1));
+      // 调用API获取会话列表
+      final response = await _apiService.getConversationList();
 
-      // 模拟数据
-      setState(() {
-        _conversationList = [];
-      });
+      if (response.success && response.data != null) {
+        setState(() {
+          _conversationList = response.data!;
+          _sortConversationList();
+        });
+      } else {
+        if (response.message.isNotEmpty) {
+          EasyLoading.showError(response.message);
+        }
+      }
     } catch (e) {
       EasyLoading.showError('加载失败: $e');
     } finally {
@@ -497,8 +502,33 @@ class _ChatListPageState extends State<ChatListPage> {
           ],
         ),
         onTap: () {
-          // TODO: 跳转到聊天详情页
-          EasyLoading.showInfo('聊天功能待开发');
+          // 跳转到聊天页面
+          // 构建对方用户信息
+          final friend = User(
+            id: int.tryParse(conversation.targetId) ?? 0,
+            username: conversation.targetName,
+            email: '',
+            nickname: conversation.targetName,
+            avatarUrl: conversation.targetAvatarUrl,
+            phone: null,
+            status: 'ACTIVE',
+            userType: 'NORMAL',
+            isGuest: false,
+            createdAt: '',
+            updatedAt: '',
+          );
+
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                friend: friend,
+                conversationId: int.tryParse(conversation.id),
+              ),
+            ),
+          ).then((_) {
+            // 从聊天页面返回后刷新会话列表
+            _loadConversationList();
+          });
         },
       ),
     );
