@@ -12,7 +12,6 @@ class AddFriendPage extends StatefulWidget {
 }
 
 class _AddFriendPageState extends State<AddFriendPage> {
-  final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   final _remarkController = TextEditingController();
   final _apiService = ApiService();
@@ -105,167 +104,157 @@ class _AddFriendPageState extends State<AddFriendPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('添加好友'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 搜索提示
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.blue[700],
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        '输入对方的账号或邮箱来搜索好友',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              // 搜索框
-              Row(
+        child: Column(
+          children: [
+            // 搜索区域
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      controller: _accountController,
-                      decoration: InputDecoration(
-                        labelText: '账号/邮箱',
-                        hintText: '请输入账号或邮箱',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _accountController,
+                        decoration: const InputDecoration(
+                          hintText: '搜索账号或邮箱',
+                          prefixIcon: Icon(Icons.search, size: 22),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
                         ),
+                        onSubmitted: (_) => _searchUser(),
                       ),
-                      onFieldSubmitted: (_) => _searchUser(),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isSearching ? null : _searchUser,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 20,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Material(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(24),
+                    child: InkWell(
+                      onTap: _isSearching ? null : _searchUser,
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        child: _isSearching
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                '搜索',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-                    child: _isSearching
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('搜索'),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-              // 搜索结果
-              if (_searchResult != null) ...[
-                const Text(
-                  '搜索结果',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+            ),
+            
+            // 搜索结果
+            if (_searchResult != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 16),
-                _buildSearchResult(),
-                const SizedBox(height: 24),
-                // 只有当不是好友时才显示备注输入框和添加按钮
-                if (_searchResult!.isFriend != true) ...[
-                  // 备注输入框
-                  TextFormField(
-                    controller: _remarkController,
-                    decoration: InputDecoration(
-                      labelText: '备注名（可选）',
-                      hintText: '给好友设置备注名',
-                      prefixIcon: const Icon(Icons.edit_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
+                child: Column(
+                  children: [
+                    _buildSearchResult(),
+                    // 只有当不是好友时才显示备注输入和添加按钮
+                    if (_searchResult!.isFriend != true) ...[
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            // 备注输入框
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: TextField(
+                                controller: _remarkController,
+                                decoration: const InputDecoration(
+                                  hintText: '备注名（可选）',
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // 添加按钮
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _isAdding ? null : _addFriend,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  backgroundColor: Theme.of(context).primaryColor,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                ),
+                                child: _isAdding
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : const Text(
+                                        '添加好友',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // 添加按钮
-                  ElevatedButton(
-                    onPressed: _isAdding ? null : _addFriend,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _isAdding
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            '添加好友',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ],
-              ],
+                    ],
+                  ],
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -277,104 +266,77 @@ class _AddFriendPageState extends State<AddFriendPage> {
 
     final bool isFriend = _searchResult!.isFriend == true;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // 头像
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: _searchResult!.avatarUrl != null
-                  ? NetworkImage(_searchResult!.avatarUrl!)
-                  : null,
-              child: _searchResult!.avatarUrl == null
-                  ? Text(
-                      _searchResult!.nickname.isNotEmpty
-                          ? _searchResult!.nickname[0].toUpperCase()
-                          : _searchResult!.username[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 16),
-            // 用户信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _searchResult!.nickname.isEmpty 
-                        ? _searchResult!.username 
-                        : _searchResult!.nickname,
-                    style: const TextStyle(
-                      fontSize: 18,
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          // 头像
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+            backgroundImage: _searchResult!.avatarUrl != null
+                ? NetworkImage(_searchResult!.avatarUrl!)
+                : null,
+            child: _searchResult!.avatarUrl == null
+                ? Text(
+                    _searchResult!.nickname.isNotEmpty
+                        ? _searchResult!.nickname[0].toUpperCase()
+                        : _searchResult!.username[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          // 用户信息
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _searchResult!.nickname.isEmpty 
+                      ? _searchResult!.username 
+                      : _searchResult!.nickname,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _searchResult!.username,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _searchResult!.username,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
                   ),
-                  if (_searchResult!.phone != null &&
-                      _searchResult!.phone!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _searchResult!.phone!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ),
-            // 状态标识
+          ),
+          // 状态标识
+          if (isFriend)
             Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
+                horizontal: 10,
+                vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: isFriend ? Colors.blue[50] : Colors.green[50],
+                color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isFriend ? Icons.check_circle : Icons.person_add_outlined,
-                    size: 14,
-                    color: isFriend ? Colors.blue[700] : Colors.green[700],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isFriend ? '已是好友' : '可添加',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isFriend ? Colors.blue[700] : Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              child: Text(
+                '已添加',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
