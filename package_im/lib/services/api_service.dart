@@ -398,5 +398,119 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// 搜索用户（通过用户名或邮箱）
+  Future<ApiResponse<User>> searchUser(String username) async {
+    try {
+      debugPrint('搜索用户: $username');
+      
+      final response = await _httpManager.get<User>(
+        ApiConfig.searchUserPath(username),
+        showLoading: true,
+        fromJson: (json) {
+          // 如果返回格式是 { success: true, data: {...} }
+          if (json is Map && json['success'] == true && json['data'] != null) {
+            return User.fromJson(json['data']);
+          }
+          // 否则直接解析
+          return User.fromJson(json);
+        },
+      );
+      
+      if (response.success && response.data != null) {
+        debugPrint('搜索用户成功: ${response.data!.username}, isFriend: ${response.data!.isFriend}');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('搜索用户异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 添加好友
+  Future<ApiResponse<dynamic>> addFriend({
+    required int friendId,
+    String? remark,
+  }) async {
+    try {
+      debugPrint('添加好友: friendId=$friendId, remark=$remark');
+      
+      final response = await _httpManager.post(
+        ApiConfig.addFriendPath,
+        data: {
+          'friendId': friendId,
+          if (remark != null && remark.isNotEmpty) 'remark': remark,
+        },
+        showLoading: true,
+      );
+      
+      if (response.success) {
+        debugPrint('添加好友成功');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('添加好友异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取好友列表
+  Future<ApiResponse<List<User>>> getFriendList() async {
+    try {
+      debugPrint('获取好友列表');
+      
+      final response = await _httpManager.get(
+        ApiConfig.getFriendsPath,
+        showLoading: false,
+      );
+      
+      if (response.success && response.data != null) {
+        List<User> friendList = [];
+        
+        // 解析好友列表
+        // 实际返回格式: { code: 0, msg: "success", data: { friends: [...], totalCount: 1 } }
+        if (response.data is Map) {
+          if (response.data['friends'] is List) {
+            // 格式: data: { friends: [...] }
+            friendList = (response.data['friends'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          } else if (response.data['data'] is Map && 
+                     response.data['data']['friends'] is List) {
+            // 格式: data: { data: { friends: [...] } }
+            friendList = (response.data['data']['friends'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          }
+        } else if (response.data is List) {
+          // 直接是数组格式
+          friendList = (response.data as List)
+              .map((item) => User.fromJson(item))
+              .toList();
+        }
+        
+        debugPrint('获取好友列表成功，共 ${friendList.length} 个好友');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: friendList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: [],
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取好友列表异常: $e');
+      rethrow;
+    }
+  }
 }
 

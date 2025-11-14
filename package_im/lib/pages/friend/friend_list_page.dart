@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import '../../models/friend.dart';
+import '../../models/user.dart';
+import '../../services/api_service.dart';
 import 'add_friend_page.dart';
 
 /// 好友列表页面
@@ -12,8 +13,9 @@ class FriendListPage extends StatefulWidget {
 }
 
 class _FriendListPageState extends State<FriendListPage> {
-  List<Friend> _friendList = [];
+  List<User> _friendList = [];
   bool _isLoading = false;
+  final _apiService = ApiService();
 
   @override
   void initState() {
@@ -28,21 +30,19 @@ class _FriendListPageState extends State<FriendListPage> {
     });
 
     try {
-      // TODO: 调用API获取好友列表
-      // final response = await ApiService().getFriendList();
+      // 调用API获取好友列表
+      final response = await _apiService.getFriendList();
       
-      // 模拟延迟
-      await Future.delayed(const Duration(seconds: 1));
-
-      // 模拟数据（实际应该从API获取）
-      // setState(() {
-      //   _friendList = response.data ?? [];
-      //   _sortFriendList();
-      // });
-      
-      setState(() {
-        _friendList = [];
-      });
+      if (response.success && response.data != null) {
+        setState(() {
+          _friendList = response.data!;
+          _sortFriendList();
+        });
+      } else {
+        if (response.message.isNotEmpty) {
+          EasyLoading.showError(response.message);
+        }
+      }
     } catch (e) {
       EasyLoading.showError('加载失败: $e');
     } finally {
@@ -52,36 +52,37 @@ class _FriendListPageState extends State<FriendListPage> {
     }
   }
 
-  /// 按时间排序（最新的在前面）
+  /// 按用户名排序（字母顺序）
   void _sortFriendList() {
-    _friendList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _friendList.sort((a, b) {
+      final nameA = a.nickname.isNotEmpty ? a.nickname : a.username;
+      final nameB = b.nickname.isNotEmpty ? b.nickname : b.username;
+      return nameA.compareTo(nameB);
+    });
   }
 
   /// 添加好友
   Future<void> _navigateToAddFriend() async {
-    final result = await Navigator.of(context).push<Friend>(
+    final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => const AddFriendPage(),
       ),
     );
 
     // 如果添加成功，刷新列表
-    if (result != null) {
-      setState(() {
-        _friendList.add(result);
-        _sortFriendList();
-      });
-      EasyLoading.showSuccess('添加好友成功！');
+    if (result == true) {
+      _loadFriendList();
     }
   }
 
   /// 删除好友
-  Future<void> _deleteFriend(Friend friend) async {
+  Future<void> _deleteFriend(User friend) async {
+    final displayName = friend.nickname.isNotEmpty ? friend.nickname : friend.username;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除好友'),
-        content: Text('确定要删除好友"${friend.displayName}"吗？'),
+        content: Text('确定要删除好友"$displayName"吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -206,9 +207,9 @@ class _FriendListPageState extends State<FriendListPage> {
   }
 
   /// 好友列表项
-  Widget _buildFriendItem(Friend friend) {
+  Widget _buildFriendItem(User friend) {
     return Dismissible(
-      key: Key(friend.id),
+      key: Key(friend.id.toString()),
       background: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
@@ -220,11 +221,12 @@ class _FriendListPageState extends State<FriendListPage> {
       ),
       direction: DismissDirection.endToStart,
       confirmDismiss: (direction) async {
+        final displayName = friend.nickname.isNotEmpty ? friend.nickname : friend.username;
         return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('删除好友'),
-            content: Text('确定要删除好友"${friend.displayName}"吗？'),
+            content: Text('确定要删除好友"$displayName"吗？'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -247,14 +249,14 @@ class _FriendListPageState extends State<FriendListPage> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-          backgroundImage: friend.friendAvatarUrl != null
-              ? NetworkImage(friend.friendAvatarUrl!)
+          backgroundImage: friend.avatarUrl != null
+              ? NetworkImage(friend.avatarUrl!)
               : null,
-          child: friend.friendAvatarUrl == null
+          child: friend.avatarUrl == null
               ? Text(
-                  friend.displayName.isNotEmpty
-                      ? friend.displayName[0].toUpperCase()
-                      : '?',
+                  friend.nickname.isNotEmpty
+                      ? friend.nickname[0].toUpperCase()
+                      : friend.username[0].toUpperCase(),
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,
@@ -263,7 +265,7 @@ class _FriendListPageState extends State<FriendListPage> {
               : null,
         ),
         title: Text(
-          friend.displayName,
+          friend.nickname.isNotEmpty ? friend.nickname : friend.username,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -274,20 +276,22 @@ class _FriendListPageState extends State<FriendListPage> {
           children: [
             const SizedBox(height: 4),
             Text(
-              friend.friendUsername,
+              friend.username,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              _formatTime(friend.createdAt),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
+            if (friend.phone != null && friend.phone!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                friend.phone!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
               ),
-            ),
+            ],
           ],
         ),
         trailing: PopupMenuButton<String>(
@@ -343,7 +347,7 @@ class _FriendListPageState extends State<FriendListPage> {
   }
 
   /// 显示好友详情
-  void _showFriendDetail(Friend friend) {
+  void _showFriendDetail(User friend) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -352,13 +356,13 @@ class _FriendListPageState extends State<FriendListPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('昵称', friend.friendNickname),
-            _buildDetailRow('账号', friend.friendUsername),
-            if (friend.friendPhone != null && friend.friendPhone!.isNotEmpty)
-              _buildDetailRow('手机', friend.friendPhone!),
-            if (friend.remark != null && friend.remark!.isNotEmpty)
-              _buildDetailRow('备注', friend.remark!),
-            _buildDetailRow('添加时间', _formatTime(friend.createdAt)),
+            _buildDetailRow('昵称', friend.nickname),
+            _buildDetailRow('账号', friend.username),
+            _buildDetailRow('邮箱', friend.email),
+            if (friend.phone != null && friend.phone!.isNotEmpty)
+              _buildDetailRow('手机', friend.phone!),
+            _buildDetailRow('用户类型', _getUserTypeText(friend.userType)),
+            _buildDetailRow('状态', _getStatusText(friend.status)),
           ],
         ),
         actions: [
@@ -398,62 +402,36 @@ class _FriendListPageState extends State<FriendListPage> {
     );
   }
 
-  /// 设置备注对话框
-  void _showRemarkDialog(Friend friend) {
-    final controller = TextEditingController(text: friend.remark);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('设置备注'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: '请输入备注名',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              // TODO: 调用API更新备注
-              setState(() {
-                final index = _friendList.indexOf(friend);
-                if (index != -1) {
-                  _friendList[index] = friend.copyWith(
-                    remark: controller.text.trim(),
-                  );
-                }
-              });
-              Navigator.of(context).pop();
-              EasyLoading.showSuccess('设置成功');
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
+  /// 设置备注对话框（暂时隐藏，因为User模型没有remark字段）
+  void _showRemarkDialog(User friend) {
+    EasyLoading.showInfo('设置备注功能待开发');
   }
 
-  /// 格式化时间
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time);
+  /// 获取用户类型文本
+  String _getUserTypeText(String userType) {
+    switch (userType) {
+      case 'NORMAL':
+        return '普通用户';
+      case 'VIP':
+        return 'VIP用户';
+      case 'ADMIN':
+        return '管理员';
+      default:
+        return '未知';
+    }
+  }
 
-    if (diff.inMinutes < 1) {
-      return '刚刚';
-    } else if (diff.inHours < 1) {
-      return '${diff.inMinutes}分钟前';
-    } else if (diff.inDays < 1) {
-      return '${diff.inHours}小时前';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays}天前';
-    } else {
-      return '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')}';
+  /// 获取状态文本
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'ACTIVE':
+        return '正常';
+      case 'INACTIVE':
+        return '未激活';
+      case 'BANNED':
+        return '已封禁';
+      default:
+        return '未知';
     }
   }
 }

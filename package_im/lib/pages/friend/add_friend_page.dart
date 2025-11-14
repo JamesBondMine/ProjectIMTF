@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import '../../models/friend.dart';
+import '../../models/user.dart';
+import '../../services/api_service.dart';
 
 /// 添加好友页面
 class AddFriendPage extends StatefulWidget {
@@ -14,9 +15,10 @@ class _AddFriendPageState extends State<AddFriendPage> {
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   final _remarkController = TextEditingController();
+  final _apiService = ApiService();
   bool _isSearching = false;
   bool _isAdding = false;
-  Friend? _searchResult;
+  User? _searchResult;
 
   @override
   void dispose() {
@@ -38,28 +40,21 @@ class _AddFriendPageState extends State<AddFriendPage> {
     });
 
     try {
-      // TODO: 调用API搜索用户
-      // final response = await ApiService().searchUser(_accountController.text.trim());
-      
-      // 模拟延迟
-      await Future.delayed(const Duration(seconds: 1));
+      // 调用API搜索用户
+      final response = await _apiService.searchUser(_accountController.text.trim());
 
-      // 模拟搜索结果
-      final mockUser = Friend(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: '1',
-        friendId: '2',
-        friendUsername: _accountController.text.trim(),
-        friendNickname: '测试用户',
-        friendAvatarUrl: null,
-        friendPhone: '13800138000',
-        status: 'PENDING',
-        createdAt: DateTime.now(),
-      );
-
-      setState(() {
-        _searchResult = mockUser;
-      });
+      if (response.success && response.data != null) {
+        setState(() {
+          _searchResult = response.data;
+        });
+        
+        // 如果已经是好友，提示用户
+        if (_searchResult!.isFriend == true) {
+          EasyLoading.showInfo('该用户已是您的好友');
+        }
+      } else {
+        EasyLoading.showError(response.message.isEmpty ? '未找到该用户' : response.message);
+      }
     } catch (e) {
       EasyLoading.showError('搜索失败: $e');
     } finally {
@@ -78,24 +73,23 @@ class _AddFriendPageState extends State<AddFriendPage> {
     });
 
     try {
-      // TODO: 调用API添加好友
-      // final response = await ApiService().addFriend(
-      //   friendId: _searchResult!.friendId,
-      //   remark: _remarkController.text.trim(),
-      // );
-
-      // 模拟延迟
-      await Future.delayed(const Duration(seconds: 1));
-
-      // 创建好友对象并返回
-      final friend = _searchResult!.copyWith(
-        remark: _remarkController.text.trim(),
-        status: 'ACCEPTED',
-        createdAt: DateTime.now(),
+      // 调用API添加好友
+      final response = await _apiService.addFriend(
+        friendId: _searchResult!.id,
+        remark: _remarkController.text.trim().isEmpty 
+            ? null 
+            : _remarkController.text.trim(),
       );
 
-      if (mounted) {
-        Navigator.of(context).pop(friend);
+      if (response.success) {
+        EasyLoading.showSuccess('添加好友成功');
+
+        if (mounted) {
+          // 返回上一页，触发好友列表刷新
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        EasyLoading.showError(response.message.isEmpty ? '添加好友失败' : response.message);
       }
     } catch (e) {
       EasyLoading.showError('添加失败: $e');
@@ -213,59 +207,62 @@ class _AddFriendPageState extends State<AddFriendPage> {
                 const SizedBox(height: 16),
                 _buildSearchResult(),
                 const SizedBox(height: 24),
-                // 备注输入框
-                TextFormField(
-                  controller: _remarkController,
-                  decoration: InputDecoration(
-                    labelText: '备注名（可选）',
-                    hintText: '给好友设置备注名',
-                    prefixIcon: const Icon(Icons.edit_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
+                // 只有当不是好友时才显示备注输入框和添加按钮
+                if (_searchResult!.isFriend != true) ...[
+                  // 备注输入框
+                  TextFormField(
+                    controller: _remarkController,
+                    decoration: InputDecoration(
+                      labelText: '备注名（可选）',
+                      hintText: '给好友设置备注名',
+                      prefixIcon: const Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                // 添加按钮
-                ElevatedButton(
-                  onPressed: _isAdding ? null : _addFriend,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 24),
+                  // 添加按钮
+                  ElevatedButton(
+                    onPressed: _isAdding ? null : _addFriend,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
                     ),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    child: _isAdding
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '添加好友',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
-                  child: _isAdding
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          '添加好友',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
+                ],
               ],
             ],
           ),
@@ -277,6 +274,8 @@ class _AddFriendPageState extends State<AddFriendPage> {
   /// 搜索结果卡片
   Widget _buildSearchResult() {
     if (_searchResult == null) return const SizedBox();
+
+    final bool isFriend = _searchResult!.isFriend == true;
 
     return Card(
       elevation: 2,
@@ -291,14 +290,14 @@ class _AddFriendPageState extends State<AddFriendPage> {
             CircleAvatar(
               radius: 30,
               backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: _searchResult!.friendAvatarUrl != null
-                  ? NetworkImage(_searchResult!.friendAvatarUrl!)
+              backgroundImage: _searchResult!.avatarUrl != null
+                  ? NetworkImage(_searchResult!.avatarUrl!)
                   : null,
-              child: _searchResult!.friendAvatarUrl == null
+              child: _searchResult!.avatarUrl == null
                   ? Text(
-                      _searchResult!.friendNickname.isNotEmpty
-                          ? _searchResult!.friendNickname[0].toUpperCase()
-                          : '?',
+                      _searchResult!.nickname.isNotEmpty
+                          ? _searchResult!.nickname[0].toUpperCase()
+                          : _searchResult!.username[0].toUpperCase(),
                       style: TextStyle(
                         fontSize: 24,
                         color: Theme.of(context).primaryColor,
@@ -314,7 +313,9 @@ class _AddFriendPageState extends State<AddFriendPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _searchResult!.friendNickname,
+                    _searchResult!.nickname.isEmpty 
+                        ? _searchResult!.username 
+                        : _searchResult!.nickname,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -322,17 +323,17 @@ class _AddFriendPageState extends State<AddFriendPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _searchResult!.friendUsername,
+                    _searchResult!.username,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  if (_searchResult!.friendPhone != null &&
-                      _searchResult!.friendPhone!.isNotEmpty) ...[
+                  if (_searchResult!.phone != null &&
+                      _searchResult!.phone!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      _searchResult!.friendPhone!,
+                      _searchResult!.phone!,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[500],
@@ -349,16 +350,27 @@ class _AddFriendPageState extends State<AddFriendPage> {
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: isFriend ? Colors.blue[50] : Colors.green[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                '找到了',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.green[700],
-                  fontWeight: FontWeight.w500,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isFriend ? Icons.check_circle : Icons.person_add_outlined,
+                    size: 14,
+                    color: isFriend ? Colors.blue[700] : Colors.green[700],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isFriend ? '已是好友' : '可添加',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isFriend ? Colors.blue[700] : Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

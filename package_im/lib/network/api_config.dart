@@ -33,6 +33,15 @@ class ApiConfig {
   // 文件上传
   static const String uploadSingleFilePath = '/api/files/upload/single';
   
+  // 搜索用户（通过用户名）
+  static String searchUserPath(String username) => '/api/auth/user/$username';
+  
+  // 添加好友
+  static const String addFriendPath = '/api/friends';
+  
+  // 获取好友列表
+  static const String getFriendsPath = '/api/friends';
+  
   // 请求头
   static Map<String, dynamic> get headers => {
         'Content-Type': 'application/json',

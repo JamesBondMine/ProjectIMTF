@@ -11,6 +11,7 @@ class User {
   final bool isGuest;
   final String createdAt;
   final String updatedAt;
+  final bool? isFriend; // 是否为好友（搜索用户时返回）
 
   User({
     required this.id,
@@ -24,6 +25,7 @@ class User {
     required this.isGuest,
     required this.createdAt,
     required this.updatedAt,
+    this.isFriend,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class User {
       isGuest: json['isGuest'] ?? false,
       createdAt: json['createdAt'] ?? '',
       updatedAt: json['updatedAt'] ?? '',
+      isFriend: json['isFriend'],
     );
   }
 
@@ -55,6 +58,7 @@ class User {
       'isGuest': isGuest,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      if (isFriend != null) 'isFriend': isFriend,
     };
   }
 
