@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../chat/chat_page.dart';
 
 /// 好友详情页面
 class FriendDetailPage extends StatefulWidget {
@@ -357,8 +358,11 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
 
   /// 发送消息
   void _sendMessage() {
-    // TODO: 跳转到聊天页面
-    EasyLoading.showInfo('聊天功能待开发');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChatPage(friend: _currentFriend),
+      ),
+    );
   }
 
   /// 额外信息区域（从API获取到的更多信息）
