@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'home_page.dart';
+import 'package:package_im/pages/home_page.dart';
 import 'agreement_page.dart';
-import 'register_page.dart';
-import 'forgot_password_page.dart';
-import '../services/api_service.dart';
+import 'package:package_im/services/api_service.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
   final _apiService = ApiService();
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   bool _isAgreed = false;
   bool _isLoading = false;
 
@@ -27,18 +28,30 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _accountController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    // 先检查账号密码是否为空
+  Future<void> _handleRegister() async {
+    // 先检查账号密码邮箱是否为空
     if (_accountController.text.trim().isEmpty) {
       EasyLoading.showError('请输入账号');
       return;
     }
 
+    if (_emailController.text.trim().isEmpty) {
+      EasyLoading.showError('请输入邮箱');
+      return;
+    }
+
     if (_passwordController.text.trim().isEmpty) {
       EasyLoading.showError('请输入密码');
+      return;
+    }
+
+    if (_confirmPasswordController.text.trim().isEmpty) {
+      EasyLoading.showError('请确认密码');
       return;
     }
 
@@ -55,10 +68,13 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       try {
-        // 调用真实的登录API
-        final response = await _apiService.login(
-          usernameOrEmail: _accountController.text.trim(),
+        // 调用真实的注册API
+        final response = await _apiService.register(
+          username: _accountController.text.trim(),
+          email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+          nickname: '', // 可选
+          phone: '', // 可选
         );
 
         if (mounted) {
@@ -67,27 +83,32 @@ class _LoginPageState extends State<LoginPage> {
           });
 
           if (response.success && response.data != null) {
-            // 登录成功
-            EasyLoading.showSuccess('登录成功！');
+            // 注册成功（已自动登录）
+            EasyLoading.showSuccess('注册成功！');
 
             // 延迟一下再跳转
             await Future.delayed(const Duration(milliseconds: 500));
 
             if (mounted) {
-              // 跳转到主页，传递用户昵称
-              Navigator.of(context).pushReplacement(
+              // 跳转到主页
+              String displayName = response.data!.user.nickname.isNotEmpty
+                  ? response.data!.user.nickname
+                  : response.data!.user.username;
+
+              Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => HomePage(
-                    username: response.data!.user.nickname,
+                    username: displayName,
                   ),
                 ),
+                (route) => false, // 清除所有路由栈
               );
             }
           } else {
-            // 登录失败，显示错误信息
-            EasyLoading.showError(response.message.isNotEmpty 
-                ? response.message 
-                : '登录失败，请重试');
+            // 注册失败，显示错误信息
+            EasyLoading.showError(response.message.isNotEmpty
+                ? response.message
+                : '注册失败，请重试');
           }
         }
       } catch (e) {
@@ -116,6 +137,10 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('注册账号'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -124,38 +149,25 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 60),
+                const SizedBox(height: 20),
                 // Logo 和标题
-                Icon(
-                  Icons.lock_outline,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  '欢迎登录',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          
                 const SizedBox(height: 8),
                 Text(
-                  '请输入您的账号和密码',
+                  '请填写以下信息完成注册',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 40),
                 // 账号输入框
                 TextFormField(
                   controller: _accountController,
                   decoration: InputDecoration(
-                    labelText: '账号/邮箱',
-                    hintText: '请输入账号或邮箱',
+                    labelText: '账号 *',
+                    hintText: '请输入账号',
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -174,18 +186,59 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return '请输入账号或邮箱';
+                      return '请输入账号';
+                    }
+                    if (value.length < 3) {
+                      return '账号长度至少3个字符';
+                    }
+                    if (value.length > 20) {
+                      return '账号长度不能超过20个字符';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                // 邮箱输入框
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: '邮箱 *',
+                    hintText: '请输入邮箱',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '请输入邮箱';
+                    }
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value)) {
+                      return '请输入有效的邮箱地址';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
                 // 密码输入框
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    labelText: '密码',
+                    labelText: '密码 *',
                     hintText: '请输入密码',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
@@ -222,13 +275,63 @@ class _LoginPageState extends State<LoginPage> {
                     if (value.length < 6) {
                       return '密码长度至少6个字符';
                     }
+                    if (value.length > 20) {
+                      return '密码长度不能超过20个字符';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                // 确认密码输入框
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: !_isConfirmPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: '确认密码 *',
+                    hintText: '请再次输入密码',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '请确认密码';
+                    }
+                    if (value != _passwordController.text) {
+                      return '两次输入的密码不一致';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 32),
-                // 登录按钮
+                // 注册按钮
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed: _isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -249,7 +352,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         )
                       : const Text(
-                          '登录',
+                          '注册',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -312,31 +415,23 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                // 底部链接
+                const SizedBox(height: 16),
+                // 已有账号，去登录
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordPage(),
-                          ),
-                        );
-                      },
-                      child: const Text('忘记密码？'),
+                    Text(
+                      '已有账号？',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
-                        // 跳转到注册页面
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
-                          ),
-                        );
+                        Navigator.of(context).pop();
                       },
-                      child: const Text('立即注册'),
+                      child: const Text('立即登录'),
                     ),
                   ],
                 ),
