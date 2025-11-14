@@ -356,13 +356,59 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
     );
   }
 
-  /// 发送消息
-  void _sendMessage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ChatPage(friend: _currentFriend),
-      ),
-    );
+  /// 发送消息（先获取会话ID）
+  Future<void> _sendMessage() async {
+    try {
+      // 显示加载提示
+      EasyLoading.show(status: '加载中...');
+
+      // 1. 获取或创建会话
+      final response = await _apiService.getConversationWithUser(_currentFriend.id);
+
+      EasyLoading.dismiss();
+
+      if (response.success && response.data != null) {
+        final conversation = response.data!;
+        
+        debugPrint('✅ 获取到会话 ID: ${conversation.id}');
+        
+        // 2. 跳转到聊天页面，传递会话ID
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                friend: _currentFriend,
+                conversationId: int.tryParse(conversation.id),
+              ),
+            ),
+          );
+        }
+      } else {
+        // 获取会话失败，仍然可以跳转（聊天页面会创建新会话）
+        if (mounted) {
+          EasyLoading.showError(response.message.isEmpty ? '获取会话失败' : response.message);
+          
+          // 延迟跳转，让用户看到提示
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    friend: _currentFriend,
+                    conversationId: null, // 没有会话ID，聊天页面将显示空消息
+                  ),
+                ),
+              );
+            }
+          });
+        }
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      if (mounted) {
+        EasyLoading.showError('操作失败: $e');
+      }
+    }
   }
 
   /// 额外信息区域（从API获取到的更多信息）

@@ -51,8 +51,14 @@ class ApiConfig {
   // 获取会话列表
   static const String getConversationsPath = '/api/chat/conversations';
   
+  // 获取或创建与指定用户的会话
+  static String getConversationWithUserPath(int targetUserId) => '/api/chat/conversations/with/$targetUserId';
+  
   // 获取历史消息
   static String getMessageHistoryPath(int conversationId) => '/api/chat/messages/$conversationId';
+  
+  // 标记消息已读
+  static String markMessagesAsReadPath(int conversationId) => '/api/chat/messages/$conversationId/read';
   
   // 删除会话
   static String deleteConversationPath(String conversationId) => '/api/chat/conversations/$conversationId';

@@ -715,6 +715,79 @@ class ApiService {
     }
   }
 
+  /// 获取或创建与指定用户的会话
+  Future<ApiResponse<ChatConversation>> getConversationWithUser(int targetUserId) async {
+    try {
+      debugPrint('获取与用户 $targetUserId 的会话...');
+
+      final response = await _httpManager.get(
+        ApiConfig.getConversationWithUserPath(targetUserId),
+        showLoading: true,
+      );
+
+      if (response.success && response.data != null) {
+        debugPrint('✅ 获取会话成功');
+        debugPrint('会话数据: ${response.data}');
+
+        // 解析会话数据
+        final conversationData = response.data as Map<String, dynamic>;
+        final conversation = ChatConversation.fromJson(conversationData);
+
+        return ApiResponse(
+          success: true,
+          code: response.code,
+          message: response.message,
+          data: conversation,
+        );
+      } else {
+        debugPrint('❌ 获取会话失败: ${response.message}');
+        return ApiResponse(
+          success: false,
+          code: response.code,
+          message: response.message,
+          data: null,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ 获取会话异常: $e');
+      return ApiResponse(
+        success: false,
+        code: -1,
+        message: '获取会话失败: $e',
+        data: null,
+      );
+    }
+  }
+
+  /// 标记会话消息为已读
+  Future<ApiResponse<dynamic>> markMessagesAsRead(int conversationId) async {
+    try {
+      debugPrint('标记会话 $conversationId 的消息为已读...');
+
+      final response = await _httpManager.put(
+        ApiConfig.markMessagesAsReadPath(conversationId),
+        data: {},
+        showLoading: false, // 后台静默调用，不显示加载提示
+      );
+
+      if (response.success) {
+        debugPrint('✅ 消息已标记为已读');
+      } else {
+        debugPrint('⚠️ 标记已读失败: ${response.message}');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('❌ 标记已读异常: $e');
+      return ApiResponse(
+        success: false,
+        code: -1,
+        message: '标记已读失败: $e',
+        data: null,
+      );
+    }
+  }
+
   // ==================== WebSocket 聊天功能 ====================
 
   /// 连接聊天 WebSocket

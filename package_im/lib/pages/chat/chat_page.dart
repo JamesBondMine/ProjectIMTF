@@ -37,6 +37,8 @@ class _ChatPageState extends State<ChatPage> {
     // 如果有conversationId，加载历史消息；否则加载模拟数据
     if (widget.conversationId != null) {
       _loadHistoryMessages();
+      // 标记消息为已读
+      _markMessagesAsRead();
     } else {
       _loadMockMessages();
     }
@@ -100,6 +102,19 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 标记消息为已读
+  Future<void> _markMessagesAsRead() async {
+    if (widget.conversationId == null) return;
+
+    try {
+      await _apiService.markMessagesAsRead(widget.conversationId!);
+      debugPrint('✅ 已标记消息为已读，会话ID: ${widget.conversationId}');
+    } catch (e) {
+      debugPrint('⚠️ 标记消息已读失败: $e');
+      // 不显示错误提示，静默失败
+    }
+  }
+
   /// 加载历史消息
   Future<void> _loadHistoryMessages() async {
     if (widget.conversationId == null) return;
@@ -136,11 +151,9 @@ class _ChatPageState extends State<ChatPage> {
 
         debugPrint('✅ 加载了 ${messages.length} 条历史消息，最旧的在上，最新的在下');
 
-        // 滚动到底部，显示最新消息（首次加载快速跳转）
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-          }
+        // 滚动到底部，显示最新消息（等待 ListView 构建完成后再滚动）
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottomAfterLoad();
         });
       } else {
         if (response.message.isNotEmpty) {
@@ -185,6 +198,11 @@ class _ChatPageState extends State<ChatPage> {
           timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
         ),
       ]);
+    });
+
+    // 加载模拟消息后也滚动到底部
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottomAfterLoad();
     });
   }
 
@@ -256,7 +274,7 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  /// 滚动到底部
+  /// 滚动到底部（用于新消息）
   void _scrollToBottom({bool animated = true}) {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -274,6 +292,50 @@ class _ChatPageState extends State<ChatPage> {
         }
       }
     });
+  }
+
+  /// 加载完成后滚动到底部（确保 ListView 已构建）
+  void _scrollToBottomAfterLoad({int retryCount = 0}) {
+    // 检查是否有消息
+    if (_messages.isEmpty) {
+      debugPrint('⚠️ 消息列表为空，无需滚动');
+      return;
+    }
+
+    if (!_scrollController.hasClients) {
+      // 如果 ScrollController 还没有 clients，延迟后重试（最多重试5次）
+      if (retryCount >= 5) {
+        debugPrint('⚠️ 滚动重试次数过多，放弃');
+        return;
+      }
+      
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollToBottomAfterLoad(retryCount: retryCount + 1);
+      });
+      return;
+    }
+
+    _performScroll();
+  }
+
+  /// 执行滚动操作
+  void _performScroll() {
+    try {
+      if (_scrollController.hasClients && _messages.isNotEmpty) {
+        // 等待一帧，确保 ListView 完全构建
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            final maxScrollExtent = _scrollController.position.maxScrollExtent;
+            if (maxScrollExtent > 0) {
+              _scrollController.jumpTo(maxScrollExtent);
+              debugPrint('✅ 已滚动到底部显示最新消息 (滚动距离: $maxScrollExtent)');
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠️ 滚动到底部失败: $e');
+    }
   }
 
   /// 选择并发送图片

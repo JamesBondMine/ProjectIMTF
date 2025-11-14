@@ -4,6 +4,7 @@ import '../../models/chat_conversation.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../profile/profile_page.dart';
+import '../friend/add_friend_page.dart';
 import 'chat_page.dart';
 
 /// 聊天列表页面
@@ -215,19 +216,20 @@ class _ChatListPageState extends State<ChatListPage> {
               ),
             ),
           ),
-          // 搜索按钮
+          // 搜索好友按钮
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.person_add),
             onPressed: () {
-              EasyLoading.showInfo('搜索功能待开发');
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AddFriendPage(),
+                ),
+              ).then((_) {
+                // 从添加好友页面返回后刷新会话列表
+                _loadConversationList();
+              });
             },
-          ),
-          // 添加按钮
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              EasyLoading.showInfo('新建聊天功能待开发');
-            },
+            tooltip: '添加好友',
           ),
         ],
       ),
