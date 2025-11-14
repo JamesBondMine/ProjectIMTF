@@ -4,6 +4,7 @@ import '../network/api_config.dart';
 import '../network/api_response.dart';
 import '../models/user.dart';
 import '../models/login_response.dart';
+import '../utils/storage_manager.dart';
 
 /// API服务类
 class ApiService {
@@ -11,6 +12,7 @@ class ApiService {
   factory ApiService() => _instance;
 
   final HttpManager _httpManager = HttpManager();
+  final StorageManager _storageManager = StorageManager();
 
   // 当前登录用户
   User? _currentUser;
@@ -26,6 +28,53 @@ class ApiService {
 
   /// 是否已登录
   bool get isLoggedIn => _token != null && _currentUser != null;
+
+  /// 初始化（从本地存储恢复登录状态）
+  Future<void> init() async {
+    debugPrint('ApiService 初始化中...');
+    await _storageManager.init();
+    await _restoreLoginState();
+  }
+
+  /// 从本地存储恢复登录状态
+  Future<void> _restoreLoginState() async {
+    try {
+      // 检查是否已登录
+      bool isLoggedIn = await _storageManager.isLoggedIn();
+      if (!isLoggedIn) {
+        debugPrint('用户未登录');
+        return;
+      }
+
+      // 读取Token
+      String? token = await _storageManager.getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('Token为空，清除登录状态');
+        await _storageManager.clearLoginData();
+        return;
+      }
+
+      // 读取用户信息
+      Map<String, dynamic>? userInfoJson = await _storageManager.getUserInfo();
+      if (userInfoJson == null) {
+        debugPrint('用户信息为空，清除登录状态');
+        await _storageManager.clearLoginData();
+        return;
+      }
+
+      // 恢复登录状态
+      _token = token;
+      _currentUser = User.fromJson(userInfoJson);
+      _httpManager.setToken(_token!);
+
+      debugPrint('登录状态恢复成功');
+      debugPrint('Token: $_token');
+      debugPrint('用户: ${_currentUser?.nickname}');
+    } catch (e) {
+      debugPrint('恢复登录状态失败: $e');
+      await _storageManager.clearLoginData();
+    }
+  }
 
   /// 用户登录
   /// 
@@ -51,13 +100,19 @@ class ApiService {
       debugPrint('登录响应: $response');
 
       if (response.success && response.data != null) {
-        // 保存Token和用户信息
+        // 保存Token和用户信息到内存
         _token = response.data!.token;
         _currentUser = response.data!.user;
         _httpManager.setToken(_token!);
 
+        // 保存到本地存储
+        await _storageManager.saveToken(_token!);
+        await _storageManager.saveUserInfo(_currentUser!.toJson());
+        await _storageManager.setLoggedIn(true);
+
         debugPrint('登录成功: ${_currentUser?.nickname}');
         debugPrint('Token: $_token');
+        debugPrint('数据已保存到本地存储');
       }
 
       return response;
@@ -105,18 +160,22 @@ class ApiService {
       // 调用退出登录接口（如果有）
       // await _httpManager.post(ApiConfig.logoutPath);
 
-      // 清除本地数据
+      // 清除内存中的数据
       _token = null;
       _currentUser = null;
       _httpManager.clearToken();
 
-      debugPrint('退出登录成功');
+      // 清除本地存储
+      await _storageManager.clearLoginData();
+
+      debugPrint('退出登录成功，已清除所有数据');
     } catch (e) {
       debugPrint('退出登录失败: $e');
       // 即使接口调用失败，也要清除本地数据
       _token = null;
       _currentUser = null;
       _httpManager.clearToken();
+      await _storageManager.clearLoginData();
     }
   }
 
