@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../network/http_manager.dart';
 import '../network/api_config.dart';
 import '../network/api_response.dart';
+import '../network/websocket_manager.dart';
 import '../models/user.dart';
 import '../models/login_response.dart';
 import '../models/message.dart';
@@ -16,10 +18,19 @@ class ApiService {
 
   final HttpManager _httpManager = HttpManager();
   final StorageManager _storageManager = StorageManager();
+  final WebSocketManager _webSocketManager = WebSocketManager();
 
   // 当前登录用户
   User? _currentUser;
   String? _token;
+
+  // WebSocket 相关
+  bool _isChatWebSocketConnected = false;
+  StreamSubscription<WebSocketMessage>? _messageSubscription;
+  StreamSubscription<WebSocketStatus>? _statusSubscription;
+  
+  // 消息接收回调
+  Function(Message)? _onMessageReceived;
 
   ApiService._internal();
 
@@ -31,6 +42,9 @@ class ApiService {
 
   /// 是否已登录
   bool get isLoggedIn => _token != null && _currentUser != null;
+
+  /// 是否 WebSocket 已连接
+  bool get isChatWebSocketConnected => _isChatWebSocketConnected;
 
   /// 初始化（从本地存储恢复登录状态）
   Future<void> init() async {
@@ -698,6 +712,137 @@ class ApiService {
     } catch (e) {
       debugPrint('删除会话异常: $e');
       rethrow;
+    }
+  }
+
+  // ==================== WebSocket 聊天功能 ====================
+
+  /// 连接聊天 WebSocket
+  Future<bool> connectChatWebSocket({Function(Message)? onMessageReceived}) async {
+    try {
+      if (_token == null) {
+        debugPrint('未登录，无法连接聊天 WebSocket');
+        return false;
+      }
+
+      if (_isChatWebSocketConnected) {
+        debugPrint('聊天 WebSocket 已连接');
+        return true;
+      }
+
+      _onMessageReceived = onMessageReceived;
+
+      // 构建 WebSocket URL (使用 wss 协议)
+      final wsUrl = '${ApiConfig.wsBaseUrl}/ws/chat?token=$_token';
+      
+      debugPrint('开始连接聊天 WebSocket: $wsUrl');
+
+      // 监听连接状态
+      _statusSubscription = _webSocketManager.statusStream.listen((status) {
+        debugPrint('WebSocket 状态变化: $status');
+        _isChatWebSocketConnected = (status == WebSocketStatus.connected);
+      });
+
+      // 监听消息
+      _messageSubscription = _webSocketManager.messageStream.listen((wsMessage) {
+        _handleWebSocketMessage(wsMessage);
+      });
+
+      // 连接 WebSocket
+      await _webSocketManager.connect(
+        url: wsUrl,
+        autoReconnect: true,
+      );
+
+      // 等待连接成功（最多5秒）
+      int attempts = 0;
+      while (!_isChatWebSocketConnected && attempts < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+
+      if (_isChatWebSocketConnected) {
+        debugPrint('聊天 WebSocket 连接成功');
+        return true;
+      } else {
+        debugPrint('聊天 WebSocket 连接超时');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('连接聊天 WebSocket 失败: $e');
+      _isChatWebSocketConnected = false;
+      return false;
+    }
+  }
+
+  /// 断开聊天 WebSocket
+  Future<void> disconnectChatWebSocket() async {
+    try {
+      debugPrint('断开聊天 WebSocket');
+      
+      await _messageSubscription?.cancel();
+      await _statusSubscription?.cancel();
+      
+      _messageSubscription = null;
+      _statusSubscription = null;
+      _onMessageReceived = null;
+      
+      await _webSocketManager.disconnect();
+      
+      _isChatWebSocketConnected = false;
+      
+      debugPrint('聊天 WebSocket 已断开');
+    } catch (e) {
+      debugPrint('断开聊天 WebSocket 异常: $e');
+    }
+  }
+
+  /// 通过 WebSocket 发送消息
+  Future<bool> sendMessageViaWebSocket({
+    required int receiverId,
+    required String content,
+    String messageType = 'TEXT',
+  }) async {
+    try {
+      if (!_isChatWebSocketConnected) {
+        debugPrint('WebSocket 未连接，无法发送消息');
+        return false;
+      }
+
+      final messageData = {
+        'receiverId': receiverId,
+        'content': content,
+        'messageType': messageType,
+      };
+
+      _webSocketManager.sendJson(messageData);
+      debugPrint('通过 WebSocket 发送消息: $messageData');
+      
+      return true;
+    } catch (e) {
+      debugPrint('WebSocket 发送消息失败: $e');
+      return false;
+    }
+  }
+
+  /// 处理 WebSocket 接收到的消息
+  void _handleWebSocketMessage(WebSocketMessage wsMessage) {
+    try {
+      if (wsMessage.type == MessageType.text && wsMessage.data is Map) {
+        final data = wsMessage.data as Map<String, dynamic>;
+        
+        debugPrint('收到 WebSocket 消息: $data');
+        
+        // 解析为 Message 对象
+        final message = Message.fromJson(data);
+        
+        // 调用回调
+        if (_onMessageReceived != null) {
+          _onMessageReceived!(message);
+        }
+      }
+    } catch (e) {
+      debugPrint('处理 WebSocket 消息失败: $e');
     }
   }
 }

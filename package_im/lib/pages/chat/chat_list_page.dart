@@ -140,13 +140,16 @@ class _ChatListPageState extends State<ChatListPage> {
           children: [
             // 顶部用户头像区域
             _buildHeader(),
-            // 聊天列表
+            // 聊天列表（包含下拉刷新）
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _conversationList.isEmpty
-                      ? _buildEmptyState()
-                      : _buildConversationList(),
+              child: RefreshIndicator(
+                onRefresh: _loadConversationList,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _conversationList.isEmpty
+                        ? _buildEmptyState()
+                        : _buildConversationList(),
+              ),
             ),
           ],
         ),
@@ -231,55 +234,73 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-  /// 空状态页面
+  /// 空状态页面（支持下拉刷新）
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 120,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '暂无聊天',
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 120,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    '暂无聊天',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '去好友列表找人聊天吧',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '下拉刷新',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            '去好友列表找人聊天吧',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   /// 会话列表
   Widget _buildConversationList() {
-    return RefreshIndicator(
-      onRefresh: _loadConversationList,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _conversationList.length,
-        separatorBuilder: (context, index) => const Divider(
-          height: 1,
-          indent: 72,
-        ),
-        itemBuilder: (context, index) {
-          final conversation = _conversationList[index];
-          return _buildConversationItem(conversation);
-        },
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _conversationList.length,
+      separatorBuilder: (context, index) => const Divider(
+        height: 1,
+        indent: 72,
       ),
+      itemBuilder: (context, index) {
+        final conversation = _conversationList[index];
+        return _buildConversationItem(conversation);
+      },
     );
   }
 

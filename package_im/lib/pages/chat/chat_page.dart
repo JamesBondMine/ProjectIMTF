@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/user.dart';
+import '../../models/message.dart';
 import '../../services/api_service.dart';
 
 /// 聊天页面
@@ -30,6 +31,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    // 连接 WebSocket
+    _connectWebSocket();
+    
     // 如果有conversationId，加载历史消息；否则加载模拟数据
     if (widget.conversationId != null) {
       _loadHistoryMessages();
@@ -40,9 +44,60 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    // 断开 WebSocket
+    _apiService.disconnectChatWebSocket();
+    
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// 连接 WebSocket
+  Future<void> _connectWebSocket() async {
+    try {
+      debugPrint('尝试连接聊天 WebSocket...');
+      
+      final connected = await _apiService.connectChatWebSocket(
+        onMessageReceived: _onWebSocketMessage,
+      );
+      
+      if (connected) {
+        debugPrint('✅ WebSocket 连接成功，将优先使用 WebSocket 发送消息');
+      } else {
+        debugPrint('⚠️ WebSocket 连接失败，将使用 HTTP 发送消息');
+      }
+    } catch (e) {
+      debugPrint('❌ WebSocket 连接异常: $e');
+    }
+  }
+
+  /// 处理 WebSocket 接收到的消息
+  void _onWebSocketMessage(Message message) {
+    try {
+      debugPrint('收到 WebSocket 消息: ${message.toString()}');
+      
+      // 只处理对方发送的消息（receiverId 是当前用户）
+      final currentUserId = _apiService.currentUser?.id;
+      if (message.receiverId == currentUserId) {
+        final chatMessage = ChatMessage(
+          id: message.id.toString(),
+          content: message.content,
+          isSentByMe: false,
+          timestamp: DateTime.parse(message.createdAt),
+          messageType: message.messageType,
+          imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+        );
+        
+        if (mounted) {
+          setState(() {
+            _messages.add(chatMessage);
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      debugPrint('处理 WebSocket 消息失败: $e');
+    }
   }
 
   /// 加载历史消息
@@ -59,24 +114,34 @@ class _ChatPageState extends State<ChatPage> {
       if (response.success && response.data != null) {
         final currentUserId = _apiService.currentUser?.id;
         
+        // 转换消息列表
+        final messages = response.data!.map((message) {
+          return ChatMessage(
+            id: message.id.toString(),
+            content: message.content,
+            isSentByMe: message.senderId == currentUserId,
+            timestamp: DateTime.parse(message.createdAt),
+            messageType: message.messageType,
+            imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+          );
+        }).toList();
+
+        // 🔑 关键：按时间正序排序（最旧的在前，最新的在后）
+        messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        
         setState(() {
           _messages.clear();
-          _messages.addAll(
-            response.data!.map((message) {
-              return ChatMessage(
-                id: message.id.toString(),
-                content: message.content,
-                isSentByMe: message.senderId == currentUserId,
-                timestamp: DateTime.parse(message.createdAt),
-                messageType: message.messageType,
-                imageUrl: message.messageType == 'IMAGE' ? message.content : null,
-              );
-            }).toList(),
-          );
+          _messages.addAll(messages);
         });
 
-        // 滚动到底部
-        _scrollToBottom();
+        debugPrint('✅ 加载了 ${messages.length} 条历史消息，最旧的在上，最新的在下');
+
+        // 滚动到底部，显示最新消息（首次加载快速跳转）
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
       } else {
         if (response.message.isNotEmpty) {
           EasyLoading.showError(response.message);
@@ -146,8 +211,29 @@ class _ChatPageState extends State<ChatPage> {
     // 滚动到底部
     _scrollToBottom();
 
+    bool success = false;
+
     try {
-      // 调用API发送消息
+      // 1. 优先尝试通过 WebSocket 发送
+      if (_apiService.isChatWebSocketConnected) {
+        debugPrint('📤 尝试通过 WebSocket 发送消息...');
+        success = await _apiService.sendMessageViaWebSocket(
+          receiverId: widget.friend.id,
+          content: text,
+          messageType: 'TEXT',
+        );
+        
+        if (success) {
+          debugPrint('✅ WebSocket 发送成功');
+          return;
+        } else {
+          debugPrint('⚠️ WebSocket 发送失败，降级到 HTTP');
+        }
+      } else {
+        debugPrint('⚠️ WebSocket 未连接，使用 HTTP 发送');
+      }
+
+      // 2. WebSocket 失败或未连接，使用 HTTP 发送
       final response = await _apiService.sendMessage(
         receiverId: widget.friend.id,
         content: text,
@@ -160,7 +246,7 @@ class _ChatPageState extends State<ChatPage> {
           EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
         }
       } else {
-        debugPrint('消息发送成功: ${response.data?.id}');
+        debugPrint('✅ HTTP 发送成功: ${response.data?.id}');
       }
     } catch (e) {
       // 发送失败，提示用户
@@ -171,14 +257,21 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   /// 滚动到底部
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animated = true}) {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (animated) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        } else {
+          // 快速跳转到底部（用于首次加载）
+          _scrollController.jumpTo(
+            _scrollController.position.maxScrollExtent,
+          );
+        }
       }
     });
   }
@@ -227,6 +320,29 @@ class _ChatPageState extends State<ChatPage> {
       _scrollToBottom();
 
       // 4. 发送图片消息
+      bool success = false;
+
+      // 优先尝试通过 WebSocket 发送
+      if (_apiService.isChatWebSocketConnected) {
+        debugPrint('📤 尝试通过 WebSocket 发送图片...');
+        success = await _apiService.sendMessageViaWebSocket(
+          receiverId: widget.friend.id,
+          content: imageUrl,
+          messageType: 'IMAGE',
+        );
+        
+        if (success) {
+          debugPrint('✅ WebSocket 发送图片成功');
+          EasyLoading.dismiss();
+          return;
+        } else {
+          debugPrint('⚠️ WebSocket 发送图片失败，降级到 HTTP');
+        }
+      } else {
+        debugPrint('⚠️ WebSocket 未连接，使用 HTTP 发送图片');
+      }
+
+      // WebSocket 失败或未连接，使用 HTTP 发送
       final response = await _apiService.sendMessage(
         receiverId: widget.friend.id,
         content: imageUrl, // 图片消息的content是图片URL
@@ -240,7 +356,7 @@ class _ChatPageState extends State<ChatPage> {
           EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
         }
       } else {
-        debugPrint('图片消息发送成功: ${response.data?.id}');
+        debugPrint('✅ HTTP 发送图片成功: ${response.data?.id}');
       }
     } catch (e) {
       EasyLoading.dismiss();
