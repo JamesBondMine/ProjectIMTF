@@ -139,25 +139,6 @@ class _ProfilePageState extends State<ProfilePage> {
             title: '邮箱',
             value: user?.email ?? '未设置',
           ),
-          const Divider(height: 1, indent: 56),
-          _buildInfoItem(
-            icon: Icons.phone_outlined,
-            title: '手机号',
-            value: user?.phone ?? '未设置',
-          ),
-          const Divider(height: 1, indent: 56),
-          _buildInfoItem(
-            icon: Icons.badge_outlined,
-            title: '用户类型',
-            value: _getUserTypeText(user?.userType),
-          ),
-          const Divider(height: 1, indent: 56),
-          _buildInfoItem(
-            icon: Icons.check_circle_outline,
-            title: '账号状态',
-            value: _getStatusText(user?.status),
-            valueColor: user?.status == 'ACTIVE' ? Colors.green : Colors.grey,
-          ),
         ],
       ),
     );
@@ -180,22 +161,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
-          _buildSettingItem(
-            icon: Icons.edit_outlined,
-            title: '编辑资料',
-            onTap: () {
-              EasyLoading.showInfo('编辑资料功能待开发');
-            },
-          ),
-          const Divider(height: 1, indent: 56),
-          _buildSettingItem(
-            icon: Icons.lock_outlined,
-            title: '修改密码',
-            onTap: () {
-              EasyLoading.showInfo('修改密码功能待开发');
-            },
-          ),
-          const Divider(height: 1, indent: 56),
           _buildSettingItem(
             icon: Icons.privacy_tip_outlined,
             title: '隐私设置',
