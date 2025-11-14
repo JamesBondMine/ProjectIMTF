@@ -54,6 +54,9 @@ class ApiConfig {
   // 获取历史消息
   static String getMessageHistoryPath(int conversationId) => '/api/chat/messages/$conversationId';
   
+  // 删除会话
+  static String deleteConversationPath(String conversationId) => '/api/chat/conversations/$conversationId';
+  
   // 请求头
   static Map<String, dynamic> get headers => {
         'Content-Type': 'application/json',

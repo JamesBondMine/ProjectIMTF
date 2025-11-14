@@ -68,14 +68,18 @@ class _ChatListPageState extends State<ChatListPage> {
   /// 删除会话
   Future<void> _deleteConversation(ChatConversation conversation) async {
     try {
-      // TODO: 调用API删除会话
-      // await ApiService().deleteConversation(conversation.id);
+      // 调用API删除会话
+      final response = await _apiService.deleteConversation(conversation.id);
       
-      setState(() {
-        _conversationList.remove(conversation);
-      });
-      
-      EasyLoading.showSuccess('删除成功');
+      if (response.success) {
+        setState(() {
+          _conversationList.remove(conversation);
+        });
+        
+        EasyLoading.showSuccess('删除成功');
+      } else {
+        EasyLoading.showError(response.message.isEmpty ? '删除失败' : response.message);
+      }
     } catch (e) {
       EasyLoading.showError('删除失败: $e');
     }
@@ -457,36 +461,7 @@ class _ChatListPageState extends State<ChatListPage> {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'pin',
-                  child: Row(
-                    children: [
-                      Icon(
-                        conversation.isPinned
-                            ? Icons.push_pin_outlined
-                            : Icons.push_pin,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(conversation.isPinned ? '取消置顶' : '置顶'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'mute',
-                  child: Row(
-                    children: [
-                      Icon(
-                        conversation.isMuted
-                            ? Icons.notifications_active
-                            : Icons.notifications_off,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(conversation.isMuted ? '取消免打扰' : '消息免打扰'),
-                    ],
-                  ),
-                ),
+
                 const PopupMenuItem(
                   value: 'delete',
                   child: Row(

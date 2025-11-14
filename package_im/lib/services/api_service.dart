@@ -679,5 +679,26 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// 删除会话
+  Future<ApiResponse<dynamic>> deleteConversation(String conversationId) async {
+    try {
+      debugPrint('删除会话: conversationId=$conversationId');
+
+      final response = await _httpManager.delete(
+        ApiConfig.deleteConversationPath(conversationId),
+        showLoading: true,
+      );
+
+      if (response.success) {
+        debugPrint('删除会话成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('删除会话异常: $e');
+      rethrow;
+    }
+  }
 }
 

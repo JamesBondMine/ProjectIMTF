@@ -606,14 +606,6 @@ class _ChatPageState extends State<ChatPage> {
       child: SafeArea(
         child: Row(
           children: [
-            // 表情按钮
-            IconButton(
-              icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
-              onPressed: () {
-                // TODO: 打开表情选择器
-              },
-              tooltip: '表情',
-            ),
             // 输入框
             Expanded(
               child: Container(
