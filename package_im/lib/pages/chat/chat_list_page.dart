@@ -423,7 +423,7 @@ class _ChatListPageState extends State<ChatListPage> {
           ],
         ),
         subtitle: Text(
-          conversation.lastMessage,
+          _formatLastMessage(conversation.lastMessage),
           style: TextStyle(
             fontSize: 14,
             color: conversation.unreadCount > 0
@@ -559,6 +559,23 @@ class _ChatListPageState extends State<ChatListPage> {
         ],
       ),
     );
+  }
+
+  /// 格式化最后一条消息
+  String _formatLastMessage(String message) {
+    // 判断是否是图片消息（URL格式）
+    if (message.startsWith('http://') || message.startsWith('https://')) {
+      // 判断是否是图片URL（包含常见图片扩展名或来自文件服务）
+      if (message.contains('/files/') || 
+          message.endsWith('.jpg') || 
+          message.endsWith('.jpeg') || 
+          message.endsWith('.png') || 
+          message.endsWith('.gif') || 
+          message.endsWith('.webp')) {
+        return '[图片]';
+      }
+    }
+    return message;
   }
 
   /// 格式化时间

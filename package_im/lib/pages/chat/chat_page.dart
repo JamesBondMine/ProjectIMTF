@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
@@ -23,6 +24,7 @@ class _ChatPageState extends State<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   final _apiService = ApiService();
+  final _imagePicker = ImagePicker();
   bool _isLoading = false;
 
   @override
@@ -66,6 +68,8 @@ class _ChatPageState extends State<ChatPage> {
                 content: message.content,
                 isSentByMe: message.senderId == currentUserId,
                 timestamp: DateTime.parse(message.createdAt),
+                messageType: message.messageType,
+                imageUrl: message.messageType == 'IMAGE' ? message.content : null,
               );
             }).toList(),
           );
@@ -177,6 +181,73 @@ class _ChatPageState extends State<ChatPage> {
         );
       }
     });
+  }
+
+  /// 选择并发送图片
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    try {
+      // 1. 选择图片
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      // 显示加载提示
+      EasyLoading.show(status: '发送中...');
+
+      // 2. 上传图片获取URL
+      final uploadResult = await _apiService.uploadSingleFile(image.path);
+
+      if (!uploadResult.success || uploadResult.data == null) {
+        EasyLoading.showError('图片上传失败');
+        return;
+      }
+
+      String imageUrl = uploadResult.data!;
+
+      // 3. 先添加到本地列表（乐观更新）
+      final tempMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: '[图片]',
+        isSentByMe: true,
+        timestamp: DateTime.now(),
+        messageType: 'IMAGE',
+        imageUrl: imageUrl,
+      );
+
+      setState(() {
+        _messages.add(tempMessage);
+      });
+
+      // 滚动到底部
+      _scrollToBottom();
+
+      // 4. 发送图片消息
+      final response = await _apiService.sendMessage(
+        receiverId: widget.friend.id,
+        content: imageUrl, // 图片消息的content是图片URL
+        messageType: 'IMAGE',
+      );
+
+      EasyLoading.dismiss();
+
+      if (!response.success) {
+        if (mounted) {
+          EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
+        }
+      } else {
+        debugPrint('图片消息发送成功: ${response.data?.id}');
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      if (mounted) {
+        EasyLoading.showError('发送失败: $e');
+      }
+    }
   }
 
   @override
@@ -345,33 +416,10 @@ class _ChatPageState extends State<ChatPage> {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: message.isSentByMe
-                        ? Theme.of(context).primaryColor
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    message.content,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: message.isSentByMe ? Colors.white : Colors.black87,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
+                // 根据消息类型显示不同内容
+                message.messageType == 'IMAGE' && message.imageUrl != null
+                    ? _buildImageMessage(message)
+                    : _buildTextMessage(message),
                 const SizedBox(height: 4),
                 Text(
                   _formatTime(message.timestamp),
@@ -389,15 +437,155 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 18,
               backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              child: Icon(
-                Icons.person,
-                size: 20,
-                color: Theme.of(context).primaryColor,
-              ),
+              backgroundImage: _apiService.currentUser?.avatarUrl != null
+                  ? NetworkImage(_apiService.currentUser!.avatarUrl!)
+                  : null,
+              child: _apiService.currentUser?.avatarUrl == null
+                  ? Text(
+                      _apiService.currentUser?.nickname.isNotEmpty == true
+                          ? _apiService.currentUser!.nickname[0].toUpperCase()
+                          : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
             ),
           ],
         ],
       ),
+    );
+  }
+
+  /// 文本消息气泡
+  Widget _buildTextMessage(ChatMessage message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: message.isSentByMe
+            ? Theme.of(context).primaryColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        message.content,
+        style: TextStyle(
+          fontSize: 15,
+          color: message.isSentByMe ? Colors.white : Colors.black87,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+
+  /// 图片消息
+  Widget _buildImageMessage(ChatMessage message) {
+    return GestureDetector(
+      onTap: () {
+        // 点击图片查看大图
+        _showImagePreview(message.imageUrl!);
+      },
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 200,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            message.imageUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 200,
+                height: 200,
+                color: Colors.grey[200],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 200,
+                height: 200,
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示图片预览
+  void _showImagePreview(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -490,7 +678,7 @@ class _ChatPageState extends State<ChatPage> {
                     label: '相册',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: 打开相册选择图片
+                      _pickAndSendImage(ImageSource.gallery);
                     },
                   ),
                   _buildMoreOptionItem(
@@ -498,7 +686,7 @@ class _ChatPageState extends State<ChatPage> {
                     label: '拍摄',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: 打开相机拍摄图片
+                      _pickAndSendImage(ImageSource.camera);
                     },
                   ),
                 ],
@@ -573,12 +761,16 @@ class ChatMessage {
   final String content;
   final bool isSentByMe;
   final DateTime timestamp;
+  final String messageType; // TEXT 或 IMAGE
+  final String? imageUrl; // 图片消息的URL
 
   ChatMessage({
     required this.id,
     required this.content,
     required this.isSentByMe,
     required this.timestamp,
+    this.messageType = 'TEXT',
+    this.imageUrl,
   });
 }
 
