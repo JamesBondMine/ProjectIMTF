@@ -5,6 +5,7 @@ import 'home_page.dart';
 import 'agreement_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
+import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _apiService = ApiService();
   bool _isPasswordVisible = false;
   bool _isAgreed = false;
   bool _isLoading = false;
@@ -52,35 +54,48 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true;
       });
 
-      // 显示加载提示
-      EasyLoading.show(status: '登录中...');
-
-      // 模拟登录请求
-      await Future.delayed(const Duration(seconds: 2));
-
-      // 关闭加载提示
-      EasyLoading.dismiss();
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // 显示成功提示
-        EasyLoading.showSuccess('登录成功！');
-
-        // 延迟一下再跳转
-        await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        // 调用真实的登录API
+        final response = await _apiService.login(
+          usernameOrEmail: _accountController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
 
         if (mounted) {
-          // 登录成功，跳转到主页
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomePage(
-                username: _accountController.text,
-              ),
-            ),
-          );
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (response.success && response.data != null) {
+            // 登录成功
+            EasyLoading.showSuccess('登录成功！');
+
+            // 延迟一下再跳转
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            if (mounted) {
+              // 跳转到主页，传递用户昵称
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => HomePage(
+                    username: response.data!.user.nickname,
+                  ),
+                ),
+              );
+            }
+          } else {
+            // 登录失败，显示错误信息
+            EasyLoading.showError(response.message.isNotEmpty 
+                ? response.message 
+                : '登录失败，请重试');
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          // 异常已经在HttpManager中处理并显示
         }
       }
     }
@@ -139,8 +154,8 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _accountController,
                   decoration: InputDecoration(
-                    labelText: '账号',
-                    hintText: '请输入账号',
+                    labelText: '账号/邮箱',
+                    hintText: '请输入账号或邮箱',
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -159,10 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return '请输入账号';
-                    }
-                    if (value.length < 3) {
-                      return '账号长度至少3个字符';
+                      return '请输入账号或邮箱';
                     }
                     return null;
                   },

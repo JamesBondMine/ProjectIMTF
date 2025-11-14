@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import 'login_page.dart';
 
 class HomePage extends StatelessWidget {
   final String username;
@@ -29,9 +31,19 @@ class HomePage extends StatelessWidget {
                         child: const Text('取消'),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.of(context).pop();
-                          Navigator.of(context).pushReplacementNamed('/');
+                          // 调用退出登录API
+                          await ApiService().logout();
+                          // 返回登录页面
+                          if (context.mounted) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (context) => const LoginPage(),
+                              ),
+                              (route) => false,
+                            );
+                          }
                         },
                         child: const Text('确定'),
                       ),
