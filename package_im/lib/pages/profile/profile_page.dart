@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
+import 'feedback_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
@@ -217,6 +218,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: '用户协议',
                     content: AgreementPage.userContent,
                   ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            icon: Icons.feedback_outlined,
+            title: '投诉建议',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const FeedbackPage(),
                 ),
               );
             },

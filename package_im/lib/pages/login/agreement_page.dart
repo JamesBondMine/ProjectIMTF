@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AgreementPage extends StatelessWidget {
   final String title;
@@ -9,6 +11,80 @@ class AgreementPage extends StatelessWidget {
     required this.title,
     required this.content,
   });
+
+  /// 发送邮件
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+      queryParameters: {
+        'subject': title.contains('隐私') 
+            ? '关于隐私协议的咨询' 
+            : title.contains('用户') 
+                ? '关于用户协议的咨询'
+                : '应用咨询',
+      },
+    );
+    
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      debugPrint('无法打开邮件应用');
+    }
+  }
+
+  /// 构建富文本内容（将邮箱转换为可点击链接）
+  Widget _buildRichText(BuildContext context) {
+    final List<TextSpan> spans = [];
+    final emailRegex = RegExp(r'\b[\w\.-]+@[\w\.-]+\.\w+\b');
+    
+    int lastIndex = 0;
+    for (final match in emailRegex.allMatches(content)) {
+      // 添加邮箱前的普通文本
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: content.substring(lastIndex, match.start),
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.8,
+            color: Colors.black87,
+          ),
+        ));
+      }
+      
+      // 添加可点击的邮箱
+      final email = match.group(0)!;
+      spans.add(TextSpan(
+        text: email,
+        style: TextStyle(
+          fontSize: 16,
+          height: 1.8,
+          color: Theme.of(context).primaryColor,
+          decoration: TextDecoration.underline,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => _launchEmail(email),
+      ));
+      
+      lastIndex = match.end;
+    }
+    
+    // 添加最后剩余的文本
+    if (lastIndex < content.length) {
+      spans.add(TextSpan(
+        text: content.substring(lastIndex),
+        style: const TextStyle(
+          fontSize: 16,
+          height: 1.8,
+          color: Colors.black87,
+        ),
+      ));
+    }
+    
+    return RichText(
+      text: TextSpan(children: spans),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,13 +114,7 @@ class AgreementPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              content,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.8,
-              ),
-            ),
+            _buildRichText(context),
             const SizedBox(height: 32),
           ],
         ),
@@ -98,17 +168,43 @@ class AgreementPage extends StatelessWidget {
 • 撤回授权同意
 • 投诉和举报
 
-6. 未成年人保护
+6. 第三方SDK说明
+
+为了向您提供更好的服务体验，我们的应用集成了以下第三方SDK：
+
+6.1 网络通信SDK
+• 用途：实现即时通讯、消息推送功能
+• 收集信息：设备信息、网络状态、IP地址
+• 隐私政策：详见各SDK提供商官方网站
+
+6.2 图片加载SDK
+• 用途：优化图片加载和缓存
+• 收集信息：设备存储信息
+• 隐私政策：详见各SDK提供商官方网站
+
+6.3 文件存储SDK
+• 用途：实现文件上传、下载功能
+• 收集信息：设备存储信息、文件信息
+• 隐私政策：详见各SDK提供商官方网站
+
+6.4 数据统计SDK
+• 用途：统计应用使用情况，优化产品体验
+• 收集信息：设备信息、应用使用数据
+• 隐私政策：详见各SDK提供商官方网站
+
+我们会严格监督第三方SDK的数据使用行为，确保符合相关法律法规要求。您可以通过邮箱 shangluo24244@163.com 联系我们了解更多信息。
+
+7. 未成年人保护
 
 我们不会故意收集未满14周岁未成年人的个人信息。如果您是未成年人的监护人，发现我们收集了未成年人的信息，请联系我们。
 
-7. 联系我们
+8. 联系我们
 
 如果您对本隐私协议有任何疑问，或需要行使您的权利，请通过以下方式联系我们：
-• 邮箱：privacy@example.com
+• 邮箱：shangluo24244@163.com
 • 电话：400-123-4567
 
-8. 协议更新
+9. 协议更新
 
 我们可能会不时更新本隐私协议。更新后的协议将在应用内发布，并在重要变更时通知您。''';
 
@@ -201,7 +297,7 @@ class AgreementPage extends StatelessWidget {
 10. 联系方式
 
 如有任何疑问，请联系我们：
-• 邮箱：support@example.com
+• 邮箱：shangluo24244@163.com
 • 电话：400-123-4567
 • 地址：北京市朝阳区XX路XX号
 
