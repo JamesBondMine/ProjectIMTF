@@ -899,6 +899,23 @@ class ApiService {
     }
   }
 
+  // 消息监听器列表（支持多个页面同时监听）
+  final List<Function(Message)> _messageListeners = [];
+
+  /// 添加消息监听器
+  void addMessageListener(Function(Message) listener) {
+    if (!_messageListeners.contains(listener)) {
+      _messageListeners.add(listener);
+      debugPrint('✅ 添加消息监听器，当前监听器数量: ${_messageListeners.length}');
+    }
+  }
+
+  /// 移除消息监听器
+  void removeMessageListener(Function(Message) listener) {
+    _messageListeners.remove(listener);
+    debugPrint('✅ 移除消息监听器，当前监听器数量: ${_messageListeners.length}');
+  }
+
   /// 处理 WebSocket 接收到的消息
   void _handleWebSocketMessage(WebSocketMessage wsMessage) {
     try {
@@ -907,12 +924,47 @@ class ApiService {
         
         debugPrint('收到 WebSocket 消息: $data');
         
-        // 解析为 Message 对象
-        final message = Message.fromJson(data);
-        
-        // 调用回调
-        if (_onMessageReceived != null) {
-          _onMessageReceived!(message);
+        // 检查消息类型
+        if (data['type'] == 'NEW_MESSAGE' && data['data'] != null) {
+          // 新消息格式：{"type":"NEW_MESSAGE","data":{...}}
+          final messageData = data['data'] as Map<String, dynamic>;
+          final message = Message.fromJson(messageData);
+          
+          debugPrint('✅ 解析到新消息: id=${message.id}, content=${message.content}');
+          
+          // 通知所有监听器
+          for (var listener in _messageListeners) {
+            try {
+              listener(message);
+            } catch (e) {
+              debugPrint('⚠️ 消息监听器执行失败: $e');
+            }
+          }
+          
+          // 兼容旧的单一回调
+          if (_onMessageReceived != null) {
+            _onMessageReceived!(message);
+          }
+        } else if (data['type'] == 'ERROR') {
+          // 错误消息
+          debugPrint('❌ WebSocket 错误: ${data['message']}');
+        } else {
+          // 尝试直接解析为 Message（兼容旧格式）
+          final message = Message.fromJson(data);
+          
+          // 通知所有监听器
+          for (var listener in _messageListeners) {
+            try {
+              listener(message);
+            } catch (e) {
+              debugPrint('⚠️ 消息监听器执行失败: $e');
+            }
+          }
+          
+          // 兼容旧的单一回调
+          if (_onMessageReceived != null) {
+            _onMessageReceived!(message);
+          }
         }
       }
     } catch (e) {

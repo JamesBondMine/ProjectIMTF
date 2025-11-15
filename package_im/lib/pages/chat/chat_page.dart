@@ -31,6 +31,10 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    
+    // 注册消息监听器
+    _apiService.addMessageListener(_onWebSocketMessage);
+    
     // 连接 WebSocket
     _connectWebSocket();
     
@@ -46,6 +50,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    // 移除消息监听器
+    _apiService.removeMessageListener(_onWebSocketMessage);
+    
     // 断开 WebSocket
     _apiService.disconnectChatWebSocket();
     
@@ -76,15 +83,29 @@ class _ChatPageState extends State<ChatPage> {
   /// 处理 WebSocket 接收到的消息
   void _onWebSocketMessage(Message message) {
     try {
-      debugPrint('收到 WebSocket 消息: ${message.toString()}');
+      debugPrint('📨 [ChatPage] 收到 WebSocket 消息: id=${message.id}, sender=${message.senderId}, receiver=${message.receiverId}, content=${message.content}');
       
-      // 只处理对方发送的消息（receiverId 是当前用户）
       final currentUserId = _apiService.currentUser?.id;
-      if (message.receiverId == currentUserId) {
+      final friendId = widget.friend.id;
+      
+      // 判断消息是否属于当前会话
+      // 1. 对方发给我的：senderId == friendId && receiverId == currentUserId
+      // 2. 我发给对方的（其他设备）：senderId == currentUserId && receiverId == friendId
+      final isFromFriend = (message.senderId == friendId && message.receiverId == currentUserId);
+      final isToFriend = (message.senderId == currentUserId && message.receiverId == friendId);
+      
+      if (isFromFriend || isToFriend) {
+        // 检查消息是否已存在（避免重复）
+        final exists = _messages.any((m) => m.id == message.id.toString());
+        if (exists) {
+          debugPrint('⚠️ 消息已存在，跳过: ${message.id}');
+          return;
+        }
+        
         final chatMessage = ChatMessage(
           id: message.id.toString(),
           content: message.content,
-          isSentByMe: false,
+          isSentByMe: isToFriend,  // 我发的消息
           timestamp: DateTime.parse(message.createdAt),
           messageType: message.messageType,
           imageUrl: message.messageType == 'IMAGE' ? message.content : null,
@@ -94,11 +115,23 @@ class _ChatPageState extends State<ChatPage> {
           setState(() {
             _messages.add(chatMessage);
           });
+          
+          // 滚动到底部
           _scrollToBottom();
+          
+          debugPrint('✅ [ChatPage] 已添加消息到聊天列表: ${message.content}');
+          
+          // 如果是对方发来的消息，自动标记为已读
+          if (isFromFriend) {
+            _markMessagesAsRead();
+            debugPrint('✅ [ChatPage] 对方的消息已自动标记为已读');
+          }
         }
+      } else {
+        debugPrint('ℹ️  [ChatPage] 消息不属于当前会话，忽略');
       }
     } catch (e) {
-      debugPrint('处理 WebSocket 消息失败: $e');
+      debugPrint('❌ [ChatPage] 处理 WebSocket 消息失败: $e');
     }
   }
 

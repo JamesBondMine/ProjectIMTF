@@ -149,19 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-                // Logo 和标题
-          
-                const SizedBox(height: 8),
-                Text(
-                  '请填写以下信息完成注册',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 64),
                 // 账号输入框
                 TextFormField(
                   controller: _accountController,

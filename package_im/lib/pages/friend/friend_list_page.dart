@@ -152,7 +152,7 @@ class _FriendListPageState extends State<FriendListPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddFriend,
         tooltip: '添加好友',
-        child: const Icon(Icons.person_add),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -362,92 +362,21 @@ class _FriendListPageState extends State<FriendListPage> {
   }
 
   /// 显示好友详情
+  /// 跳转到好友详情页面
   void _showFriendDetail(User friend) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('好友信息'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDetailRow('昵称', friend.nickname),
-            _buildDetailRow('账号', friend.username),
-            _buildDetailRow('邮箱', friend.email),
-            if (friend.phone != null && friend.phone!.isNotEmpty)
-              _buildDetailRow('手机', friend.phone!),
-            _buildDetailRow('用户类型', _getUserTypeText(friend.userType)),
-            _buildDetailRow('状态', _getStatusText(friend.status)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
-          ),
-        ],
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FriendDetailPage(friend: friend),
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-        ],
-      ),
-    );
+    ).then((_) {
+      // 从好友详情页返回后刷新好友列表
+      _loadFriendList();
+    });
   }
 
   /// 设置备注对话框（暂时隐藏，因为User模型没有remark字段）
   void _showRemarkDialog(User friend) {
     EasyLoading.showInfo('设置备注功能待开发');
-  }
-
-  /// 获取用户类型文本
-  String _getUserTypeText(String userType) {
-    switch (userType) {
-      case 'NORMAL':
-        return '普通用户';
-      case 'VIP':
-        return 'VIP用户';
-      case 'ADMIN':
-        return '管理员';
-      default:
-        return '未知';
-    }
-  }
-
-  /// 获取状态文本
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'ACTIVE':
-        return '正常';
-      case 'INACTIVE':
-        return '未激活';
-      case 'BANNED':
-        return '已封禁';
-      default:
-        return '未知';
-    }
   }
 }
 

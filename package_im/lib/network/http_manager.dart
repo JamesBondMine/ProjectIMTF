@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'api_config.dart';
 import 'api_response.dart';
@@ -83,6 +84,23 @@ class HttpManager {
 
   /// 处理错误信息
   String _handleError(DioException error) {
+    // 优先尝试从响应体中提取具体错误信息
+    if (error.response?.data != null) {
+      try {
+        final data = error.response!.data;
+        // 如果响应是 Map，尝试提取 msg 或 message 字段
+        if (data is Map<String, dynamic>) {
+          final msg = data['msg'] ?? data['message'];
+          if (msg != null && msg.toString().isNotEmpty) {
+            return msg.toString();
+          }
+        }
+      } catch (e) {
+        debugPrint('解析错误消息失败: $e');
+      }
+    }
+    
+    // 如果无法从响应体提取，使用默认错误处理
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
         return '连接超时，请检查网络';

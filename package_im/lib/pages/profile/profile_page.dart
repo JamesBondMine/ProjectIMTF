@@ -3,6 +3,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
+import '../login/agreement_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
@@ -193,9 +194,31 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           _buildSettingItem(
             icon: Icons.privacy_tip_outlined,
-            title: '隐私设置',
+            title: '隐私协议',
             onTap: () {
-              EasyLoading.showInfo('隐私设置功能待开发');
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AgreementPage(
+                    title: '隐私协议',
+                    content: AgreementPage.privacyContent,
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            icon: Icons.description_outlined,
+            title: '用户协议',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AgreementPage(
+                    title: '用户协议',
+                    content: AgreementPage.userContent,
+                  ),
+                ),
+              );
             },
           ),
           const Divider(height: 1, indent: 56),

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/chat_conversation.dart';
 import '../../models/user.dart';
+import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../profile/profile_page.dart';
 import '../friend/add_friend_page.dart';
@@ -19,11 +22,64 @@ class _ChatListPageState extends State<ChatListPage> {
   List<ChatConversation> _conversationList = [];
   bool _isLoading = false;
   final _apiService = ApiService();
+  Timer? _refreshTimer;  // 定时刷新定时器
 
   @override
   void initState() {
     super.initState();
+    
+    // 注册消息监听器
+    _apiService.addMessageListener(_onWebSocketMessage);
+    
+    // 立即加载一次
     _loadConversationList();
+    
+    // 启动定时器：每8秒自动刷新
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    // 取消定时器
+    _refreshTimer?.cancel();
+    
+    // 移除消息监听器
+    _apiService.removeMessageListener(_onWebSocketMessage);
+    
+    super.dispose();
+  }
+
+  /// 启动自动刷新定时器
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
+      if (mounted) {
+        debugPrint('🔄 [ChatListPage] 定时刷新会话列表');
+        _loadConversationList();
+      }
+    });
+    debugPrint('✅ [ChatListPage] 已启动定时刷新（每8秒）');
+  }
+
+  /// 处理 WebSocket 接收到的消息
+  void _onWebSocketMessage(Message message) {
+    try {
+      debugPrint('📨 [ChatListPage] 收到 WebSocket 消息: id=${message.id}, sender=${message.senderId}, receiver=${message.receiverId}');
+      
+      final currentUserId = _apiService.currentUser?.id;
+      
+      // 只处理与当前用户相关的消息
+      if (message.senderId == currentUserId || message.receiverId == currentUserId) {
+        debugPrint('✅ [ChatListPage] 收到新消息，刷新会话列表');
+        // 延迟一下刷新，确保后端已经更新了会话列表
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadConversationList();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [ChatListPage] 处理 WebSocket 消息失败: $e');
+    }
   }
 
   /// 加载会话列表
@@ -135,35 +191,48 @@ class _ChatListPageState extends State<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 设置状态栏为透明，图标为深色
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
+
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部用户头像区域
-            _buildHeader(),
-            // 聊天列表（包含下拉刷新）
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _loadConversationList,
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _conversationList.isEmpty
-                        ? _buildEmptyState()
-                        : _buildConversationList(),
-              ),
+      body: Column(
+        children: [
+          // 顶部用户头像区域（包含状态栏）
+          _buildHeader(context),
+          // 聊天列表（包含下拉刷新）
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadConversationList,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _conversationList.isEmpty
+                      ? _buildEmptyState()
+                      : _buildConversationList(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 顶部头像区域
-  Widget _buildHeader() {
+  /// 顶部头像区域（包含状态栏）
+  Widget _buildHeader(BuildContext context) {
     final user = _apiService.currentUser;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.only(
+        top: statusBarHeight + 12,  // 状态栏高度 + 额外间距
+        left: 16,
+        right: 16,
+        bottom: 12,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -206,14 +275,34 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ),
           const SizedBox(width: 12),
-          // 标题
-          const Expanded(
-            child: Text(
-              '聊天',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+          // 显示用户账号
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  user?.nickname.isNotEmpty == true
+                      ? user!.nickname
+                      : user?.username ?? '用户',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (user?.username != null)
+                  Text(
+                    user!.username,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
           // 搜索好友按钮
