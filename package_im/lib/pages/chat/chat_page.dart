@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
+import '../../services/remark_service.dart';
+import '../friend/friend_detail_page.dart';
 
 /// 聊天页面
 class ChatPage extends StatefulWidget {
@@ -25,18 +36,38 @@ class _ChatPageState extends State<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   final _apiService = ApiService();
+  final _remarkService = RemarkService();
   final _imagePicker = ImagePicker();
   bool _isLoading = false;
+  String? _friendRemark; // 好友备注
+
+  // GIF表情列表
+  static const List<String> _gifList = [
+    'assets/gif/cupid-18601_256.gif',
+    'assets/gif/flowers-11015_256.gif',
+    'assets/gif/halloween-22525_256.gif',
+    'assets/gif/hammer-8415_256.gif',
+    'assets/gif/horse-22647_256.gif',
+    'assets/gif/hot-12616_256.gif',
+    'assets/gif/love-3955_256.gif',
+    'assets/gif/paper-23984_256.gif',
+    'assets/gif/tree-10000_256.gif',
+    'assets/gif/unicorn-16249_256.gif',
+    'assets/gif/wind-21844_256.gif',
+    'assets/gif/winter-16014_256.gif',
+  ];
 
   @override
   void initState() {
     super.initState();
     
-    // 注册消息监听器
+    // 注册消息监听器（WebSocket 已在 HomePage 建立连接）
     _apiService.addMessageListener(_onWebSocketMessage);
     
-    // 连接 WebSocket
-    _connectWebSocket();
+    // 加载好友备注
+    _loadFriendRemark();
+    
+    debugPrint('📱 [ChatPage] 已注册消息监听器，等待实时消息');
     
     // 如果有conversationId，加载历史消息；否则加载模拟数据
     if (widget.conversationId != null) {
@@ -48,42 +79,33 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 加载好友备注
+  Future<void> _loadFriendRemark() async {
+    final remark = await _remarkService.getRemark(widget.friend.id);
+    if (mounted) {
+      setState(() {
+        _friendRemark = remark;
+      });
+    }
+  }
+
   @override
   void dispose() {
-    // 移除消息监听器
+    // 移除消息监听器（但不断开 WebSocket 连接，保持全局连接）
     _apiService.removeMessageListener(_onWebSocketMessage);
     
-    // 断开 WebSocket
-    _apiService.disconnectChatWebSocket();
+    debugPrint('📱 [ChatPage] 已移除消息监听器');
     
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  /// 连接 WebSocket
-  Future<void> _connectWebSocket() async {
-    try {
-      debugPrint('尝试连接聊天 WebSocket...');
-      
-      final connected = await _apiService.connectChatWebSocket(
-        onMessageReceived: _onWebSocketMessage,
-      );
-      
-      if (connected) {
-        debugPrint('✅ WebSocket 连接成功，将优先使用 WebSocket 发送消息');
-      } else {
-        debugPrint('⚠️ WebSocket 连接失败，将使用 HTTP 发送消息');
-      }
-    } catch (e) {
-      debugPrint('❌ WebSocket 连接异常: $e');
-    }
-  }
 
   /// 处理 WebSocket 接收到的消息
   void _onWebSocketMessage(Message message) {
     try {
-      debugPrint('📨 [ChatPage] 收到 WebSocket 消息: id=${message.id}, sender=${message.senderId}, receiver=${message.receiverId}, content=${message.content}');
+      debugPrint('📨 [ChatPage] 收到 WebSocket 消息: id=${message.id}, sender=${message.senderId}, receiver=${message.receiverId}, messageType=${message.messageType}, content=${message.content}');
       
       final currentUserId = _apiService.currentUser?.id;
       final friendId = widget.friend.id;
@@ -108,7 +130,9 @@ class _ChatPageState extends State<ChatPage> {
           isSentByMe: isToFriend,  // 我发的消息
           timestamp: DateTime.parse(message.createdAt),
           messageType: message.messageType,
-          imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+          imageUrl: (message.messageType == 'IMAGE' || message.messageType == 'GIF') 
+              ? message.content 
+              : null,
         );
         
         if (mounted) {
@@ -162,15 +186,20 @@ class _ChatPageState extends State<ChatPage> {
       if (response.success && response.data != null) {
         final currentUserId = _apiService.currentUser?.id;
         
+        debugPrint('📥 收到 ${response.data!.length} 条历史消息');
+        
         // 转换消息列表
         final messages = response.data!.map((message) {
+          debugPrint('历史消息: id=${message.id}, messageType=${message.messageType}, content=${message.content.substring(0, message.content.length > 50 ? 50 : message.content.length)}...');
           return ChatMessage(
             id: message.id.toString(),
             content: message.content,
             isSentByMe: message.senderId == currentUserId,
             timestamp: DateTime.parse(message.createdAt),
             messageType: message.messageType,
-            imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+            imageUrl: (message.messageType == 'IMAGE' || message.messageType == 'GIF') 
+                ? message.content 
+                : null,
           );
         }).toList();
 
@@ -471,14 +500,49 @@ class _ChatPageState extends State<ChatPage> {
         title: Row(
           children: [
             // 头像
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: widget.friend.avatarUrl != null
-                  ? NetworkImage(widget.friend.avatarUrl!)
-                  : null,
-              child: widget.friend.avatarUrl == null
-                  ? Text(
+            widget.friend.avatarUrl != null
+                ? CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: widget.friend.avatarUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              widget.friend.nickname.isNotEmpty
+                                  ? widget.friend.nickname[0].toUpperCase()
+                                  : widget.friend.username[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(
                       widget.friend.nickname.isNotEmpty
                           ? widget.friend.nickname[0].toUpperCase()
                           : widget.friend.username[0].toUpperCase(),
@@ -487,9 +551,8 @@ class _ChatPageState extends State<ChatPage> {
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
             const SizedBox(width: 12),
             // 用户信息
             Expanded(
@@ -498,9 +561,9 @@ class _ChatPageState extends State<ChatPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    widget.friend.nickname.isNotEmpty
+                    _friendRemark ?? (widget.friend.nickname.isNotEmpty
                         ? widget.friend.nickname
-                        : widget.friend.username,
+                        : widget.friend.username),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -522,36 +585,49 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // TODO: 更多选项
+            onPressed: () async {
+              // 跳转到好友详情页面
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => FriendDetailPage(friend: widget.friend),
+                ),
+              );
+              // 返回后重新加载备注
+              _loadFriendRemark();
             },
-            tooltip: '更多',
+            tooltip: '好友详情',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 消息列表
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _messages.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
+      body: GestureDetector(
+        onTap: () {
+          // 点击空白处隐藏键盘
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          children: [
+            // 消息列表
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _messages.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 16,
+                          ),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            return _buildMessageItem(_messages[index]);
+                          },
                         ),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          return _buildMessageItem(_messages[index]);
-                        },
-                      ),
-          ),
-          // 输入框
-          _buildInputArea(),
-        ],
+            ),
+            // 输入框
+            _buildInputArea(),
+          ],
+        ),
       ),
     );
   }
@@ -599,14 +675,49 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // 对方头像（左侧）
           if (!message.isSentByMe) ...[
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: widget.friend.avatarUrl != null
-                  ? NetworkImage(widget.friend.avatarUrl!)
-                  : null,
-              child: widget.friend.avatarUrl == null
-                  ? Text(
+            widget.friend.avatarUrl != null
+                ? CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: widget.friend.avatarUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              widget.friend.nickname.isNotEmpty
+                                  ? widget.friend.nickname[0].toUpperCase()
+                                  : widget.friend.username[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(
                       widget.friend.nickname.isNotEmpty
                           ? widget.friend.nickname[0].toUpperCase()
                           : widget.friend.username[0].toUpperCase(),
@@ -615,44 +726,84 @@ class _ChatPageState extends State<ChatPage> {
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
             const SizedBox(width: 8),
           ],
           // 消息气泡
           Flexible(
-            child: Column(
-              crossAxisAlignment: message.isSentByMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                // 根据消息类型显示不同内容
-                message.messageType == 'IMAGE' && message.imageUrl != null
-                    ? _buildImageMessage(message)
-                    : _buildTextMessage(message),
-                const SizedBox(height: 4),
-                Text(
-                  _formatTime(message.timestamp),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
+            child: GestureDetector(
+              onLongPress: () => _showMessageOptions(message),
+              child: Column(
+                crossAxisAlignment: message.isSentByMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  Text(message.messageType),
+                  // 根据消息类型显示不同内容
+                  message.messageType == 'IMAGE' && message.imageUrl != null
+                      ? _buildImageMessage(message)
+                      : message.messageType == 'GIF' && message.imageUrl != null
+                          ? _buildGifMessage(message)
+                          : _buildTextMessage(message),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTime(message.timestamp),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // 自己的头像（右侧）
           if (message.isSentByMe) ...[
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: _apiService.currentUser?.avatarUrl != null
-                  ? NetworkImage(_apiService.currentUser!.avatarUrl!)
-                  : null,
-              child: _apiService.currentUser?.avatarUrl == null
-                  ? Text(
+            _apiService.currentUser?.avatarUrl != null
+                ? CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: _apiService.currentUser!.avatarUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              _apiService.currentUser?.nickname.isNotEmpty == true
+                                  ? _apiService.currentUser!.nickname[0].toUpperCase()
+                                  : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(
                       _apiService.currentUser?.nickname.isNotEmpty == true
                           ? _apiService.currentUser!.nickname[0].toUpperCase()
                           : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
@@ -661,9 +812,8 @@ class _ChatPageState extends State<ChatPage> {
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
           ],
         ],
       ),
@@ -725,40 +875,97 @@ class _ChatPageState extends State<ChatPage> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            message.imageUrl!,
+          child: CachedNetworkImage(
+            imageUrl: message.imageUrl!,
+            width: 200,
+            height: 200,
             fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                width: 200,
-                height: 200,
-                color: Colors.grey[200],
-                child: Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
+            placeholder: (context, url) => Container(
+              width: 200,
+              height: 200,
+              color: Colors.grey[200],
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              width: 200,
+              height: 200,
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(
+                  Icons.broken_image,
+                  size: 50,
+                  color: Colors.grey,
                 ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 200,
-                height: 200,
-                color: Colors.grey[200],
-                child: const Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
-              );
-            },
+              ),
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// GIF消息
+  Widget _buildGifMessage(ChatMessage message) {
+    // 判断是本地 assets 路径还是网络 URL
+    final isLocalAsset = message.imageUrl!.startsWith('assets/');
+    
+    return GestureDetector(
+      onTap: () {
+        // 点击GIF查看大图
+        _showImagePreview(message.imageUrl!);
+      },
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 200,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: isLocalAsset
+              ? Image.asset(
+                  message.imageUrl!,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                )
+              : CachedNetworkImage(
+                  imageUrl:  message.imageUrl!,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    width: 200,
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    width: 200,
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
         ),
       ),
     );
@@ -766,6 +973,9 @@ class _ChatPageState extends State<ChatPage> {
 
   /// 显示图片预览
   void _showImagePreview(String imageUrl) {
+    // 判断是本地资源还是网络图片
+    final isLocalAsset = imageUrl.startsWith('assets/');
+    
     showDialog(
       context: context,
       builder: (context) {
@@ -775,12 +985,36 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               Center(
                 child: InteractiveViewer(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                  ),
+                  child: isLocalAsset
+                      ? Image.asset(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.contain,
+                          placeholder: (context, url) => Container(
+                            color: Colors.black54,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.black54,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 80,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
+              // 关闭按钮
               Positioned(
                 top: 40,
                 right: 20,
@@ -793,11 +1027,184 @@ class _ChatPageState extends State<ChatPage> {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
+              // 保存按钮
+              Positioned(
+                bottom: 60,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      await _saveImageToGallery(imageUrl);
+                    },
+                    icon: const Icon(Icons.download),
+                    label: const Text('保存到相册'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.9),
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  /// 保存图片到相册
+  Future<void> _saveImageToGallery(String imageUrl) async {
+    try {
+      // 1. 请求存储权限
+      var status = await Permission.photos.status;
+      if (!status.isGranted) {
+        status = await Permission.photos.request();
+        if (!status.isGranted) {
+          EasyLoading.showError('需要相册权限才能保存图片');
+          return;
+        }
+      }
+
+      EasyLoading.show(status: '保存中...');
+
+      Uint8List imageData;
+
+      // 2. 获取图片数据
+      if (imageUrl.startsWith('assets/')) {
+        // 本地资源，从 assets 加载
+        final byteData = await rootBundle.load(imageUrl);
+        imageData = byteData.buffer.asUint8List();
+      } else {
+        // 网络图片，下载
+        final response = await Dio().get(
+          imageUrl,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        imageData = response.data;
+      }
+
+      // 3. 保存到相册
+      final result = await ImageGallerySaver.saveImage(
+        imageData,
+        quality: 100,
+        name: 'chat_image_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      EasyLoading.dismiss();
+
+      if (result['isSuccess'] == true) {
+        EasyLoading.showSuccess('图片已保存到相册');
+      } else {
+        EasyLoading.showError('保存失败');
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      debugPrint('❌ 保存图片失败: $e');
+      EasyLoading.showError('保存失败: $e');
+    }
+  }
+
+  /// 显示消息操作选项
+  void _showMessageOptions(ChatMessage message) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              // 复制文本消息
+              if (message.messageType == 'TEXT')
+                ListTile(
+                  leading: const Icon(Icons.copy),
+                  title: const Text('复制'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Clipboard.setData(ClipboardData(text: message.content));
+                    EasyLoading.showSuccess('已复制到剪贴板');
+                  },
+                ),
+              // 分享文本消息
+              if (message.messageType == 'TEXT')
+                ListTile(
+                  leading: const Icon(Icons.share),
+                  title: const Text('分享'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Share.share(message.content);
+                  },
+                ),
+              // 保存图片
+              if (message.messageType == 'IMAGE' && message.imageUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.download),
+                  title: const Text('保存图片'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveImageToGallery(message.imageUrl!);
+                  },
+                ),
+              // 分享图片
+              if (message.messageType == 'IMAGE' && message.imageUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.share),
+                  title: const Text('分享图片'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _shareImage(message.imageUrl!);
+                  },
+                ),
+              // 取消
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('取消'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 分享图片
+  Future<void> _shareImage(String imageUrl) async {
+    try {
+      EasyLoading.show(status: '准备分享...');
+
+      // 1. 下载图片
+      final response = await Dio().get(
+        imageUrl,
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      // 2. 保存到临时目录
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/share_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await file.writeAsBytes(response.data);
+
+      EasyLoading.dismiss();
+
+      // 3. 分享图片
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: '来自聊天的图片',
+      );
+    } catch (e) {
+      EasyLoading.dismiss();
+      debugPrint('❌ 分享图片失败: $e');
+      EasyLoading.showError('分享失败: $e');
+    }
   }
 
   /// 输入区域
@@ -892,6 +1299,14 @@ class _ChatPageState extends State<ChatPage> {
                       _pickAndSendImage(ImageSource.camera);
                     },
                   ),
+                  _buildMoreOptionItem(
+                    icon: Icons.gif_box,
+                    label: 'GIF',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showGifPicker();
+                    },
+                  ),
                 ],
               ),
             ],
@@ -937,6 +1352,151 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
     );
+  }
+
+  /// 显示GIF选择器
+  void _showGifPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '选择GIF表情',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: _gifList.length,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _sendGif(_gifList[index]);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            _gifList[index],
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 发送GIF消息
+  Future<void> _sendGif(String gifPath) async {
+    try {
+      // 显示加载提示
+      EasyLoading.show(status: '发送中...');
+
+      // 1. 将 GIF 从 assets 复制到临时目录，然后上传
+      final byteData = await rootBundle.load(gifPath);
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/gif_${DateTime.now().millisecondsSinceEpoch}.gif');
+      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+
+      // 2. 上传 GIF 到服务器
+      final uploadResult = await _apiService.uploadSingleFile(tempFile.path);
+
+      if (!uploadResult.success || uploadResult.data == null) {
+        EasyLoading.showError('GIF上传失败');
+        return;
+      }
+
+      String gifUrl = uploadResult.data!;
+      debugPrint('✅ GIF上传成功: $gifUrl');
+
+      // 3. 先添加到本地列表（乐观更新），使用服务器URL
+      final tempMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: gifUrl,
+        isSentByMe: true,
+        timestamp: DateTime.now(),
+        messageType: 'GIF',
+        imageUrl: gifUrl,
+      );
+
+      setState(() {
+        _messages.add(tempMessage);
+      });
+
+      // 滚动到底部
+      _scrollToBottom();
+
+      bool success = false;
+
+      // 4. 优先尝试通过 WebSocket 发送
+      if (_apiService.isChatWebSocketConnected) {
+        debugPrint('📤 尝试通过 WebSocket 发送GIF: messageType=GIF, content=$gifUrl');
+        success = await _apiService.sendMessageViaWebSocket(
+          receiverId: widget.friend.id,
+          content: gifUrl,
+          messageType: 'GIF',
+        );
+        
+        if (success) {
+          debugPrint('✅ WebSocket 发送GIF成功: messageType=GIF');
+          EasyLoading.dismiss();
+          return;
+        } else {
+          debugPrint('⚠️ WebSocket 发送GIF失败，降级到 HTTP');
+        }
+      } else {
+        debugPrint('⚠️ WebSocket 未连接，使用 HTTP 发送GIF');
+      }
+
+      // 5. WebSocket 失败或未连接，使用 HTTP 发送
+      debugPrint('📤 通过 HTTP 发送GIF: messageType=GIF, content=$gifUrl');
+      final response = await _apiService.sendMessage(
+        receiverId: widget.friend.id,
+        content: gifUrl,
+        messageType: 'GIF',
+      );
+
+      EasyLoading.dismiss();
+
+      if (!response.success) {
+        if (mounted) {
+          EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
+        }
+      } else {
+        debugPrint('✅ HTTP 发送GIF成功: id=${response.data?.id}, messageType=${response.data?.messageType}');
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      if (mounted) {
+        EasyLoading.showError('发送失败: $e');
+      }
+      debugPrint('❌ 发送GIF失败: $e');
+    }
   }
 
   /// 格式化时间

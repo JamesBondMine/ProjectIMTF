@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../services/remark_service.dart';
 import '../chat/chat_page.dart';
 
 /// 好友详情页面
@@ -19,13 +21,26 @@ class FriendDetailPage extends StatefulWidget {
 
 class _FriendDetailPageState extends State<FriendDetailPage> {
   final _apiService = ApiService();
+  final _remarkService = RemarkService();
   User? _detailedFriend;
   bool _isLoading = true;
+  String? _remark; // 好友备注
 
   @override
   void initState() {
     super.initState();
     _loadUserDetail();
+    _loadRemark();
+  }
+
+  /// 加载备注
+  Future<void> _loadRemark() async {
+    final remark = await _remarkService.getRemark(widget.friend.id);
+    if (mounted) {
+      setState(() {
+        _remark = remark;
+      });
+    }
   }
 
   /// 加载用户详细信息
@@ -77,7 +92,7 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
               if (value == 'delete') {
                 _showDeleteDialog();
               } else if (value == 'remark') {
-                EasyLoading.showInfo('设置备注功能待开发');
+                _showRemarkDialog();
               }
             },
             itemBuilder: (context) => [
@@ -151,14 +166,49 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
       child: Column(
         children: [
           // 头像
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-            backgroundImage: _currentFriend.avatarUrl != null
-                ? NetworkImage(_currentFriend.avatarUrl!)
-                : null,
-            child: _currentFriend.avatarUrl == null
-                ? Text(
+          _currentFriend.avatarUrl != null
+              ? CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: _currentFriend.avatarUrl!,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            _currentFriend.nickname.isNotEmpty
+                                ? _currentFriend.nickname[0].toUpperCase()
+                                : _currentFriend.username[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 40,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: Text(
                     _currentFriend.nickname.isNotEmpty
                         ? _currentFriend.nickname[0].toUpperCase()
                         : _currentFriend.username[0].toUpperCase(),
@@ -167,15 +217,14 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
-                  )
-                : null,
-          ),
+                  ),
+                ),
           const SizedBox(height: 16),
-          // 昵称
+          // 显示名称（优先备注）
           Text(
-            _currentFriend.nickname.isNotEmpty
+            _remark ?? (_currentFriend.nickname.isNotEmpty
                 ? _currentFriend.nickname
-                : _currentFriend.username,
+                : _currentFriend.username),
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -231,26 +280,26 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
       child: Column(
         children: [
           _buildInfoItem(
-            icon: Icons.fingerprint,
+            imagePath: 'assets/images/yonghuID.png',
             title: '用户ID',
             value: _currentFriend.id.toString(),
             showDivider: true,
           ),
           _buildInfoItem(
-            icon: Icons.email_outlined,
+            imagePath: 'assets/images/youxiang.png',
             title: '邮箱',
             value: _currentFriend.email,
             showDivider: true,
           ),
           if (_currentFriend.phone != null && _currentFriend.phone!.isNotEmpty)
             _buildInfoItem(
-              icon: Icons.phone_outlined,
+              imagePath: 'assets/images/shoujihao.png',
               title: '手机号',
               value: _currentFriend.phone!,
               showDivider: true,
             ),
           _buildInfoItem(
-            icon: Icons.badge_outlined,
+            imagePath: 'assets/images/yonghuleixing.png',
             title: '用户类型',
             value: _getUserTypeText(_currentFriend.userType),
             showDivider: false,
@@ -262,7 +311,8 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
 
   /// 信息项
   Widget _buildInfoItem({
-    required IconData icon,
+    IconData? icon,
+    String? imagePath,
     required String title,
     required String value,
     required bool showDivider,
@@ -273,7 +323,14 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              Icon(icon, color: Colors.grey[600], size: 20),
+              imagePath != null
+                  ? Image.asset(
+                      imagePath,
+                      width: 20,
+                      height: 20,
+                      color: Colors.grey[600],
+                    )
+                  : Icon(icon, color: Colors.grey[600], size: 20),
               const SizedBox(width: 12),
               Text(
                 title,
@@ -492,6 +549,58 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
   }
 
   /// 显示删除对话框
+  /// 显示设置备注对话框
+  void _showRemarkDialog() {
+    final remarkController = TextEditingController(text: _remark ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('设置备注'),
+        content: TextField(
+          controller: remarkController,
+          autofocus: true,
+          maxLength: 20,
+          decoration: InputDecoration(
+            hintText: '请输入备注名称',
+            border: const OutlineInputBorder(),
+            suffixIcon: remarkController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      remarkController.clear();
+                    },
+                  )
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newRemark = remarkController.text.trim();
+              Navigator.of(context).pop();
+              
+              // 保存备注
+              await _remarkService.setRemark(_currentFriend.id, newRemark);
+              
+              // 更新显示
+              setState(() {
+                _remark = newRemark.isEmpty ? null : newRemark;
+              });
+              
+              EasyLoading.showSuccess(newRemark.isEmpty ? '已清除备注' : '备注设置成功');
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDeleteDialog() {
     final displayName = _currentFriend.nickname.isNotEmpty
         ? _currentFriend.nickname
@@ -579,9 +688,3 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
     }
   }
 }
-
-// 添加调试输出
-void debugPrint(String message) {
-  print(message);
-}
-

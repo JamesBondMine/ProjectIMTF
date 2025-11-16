@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/api_service.dart';
 
 /// 投诉建议页面
 class FeedbackPage extends StatefulWidget {
@@ -12,8 +15,13 @@ class FeedbackPage extends StatefulWidget {
 class _FeedbackPageState extends State<FeedbackPage> {
   final _formKey = GlobalKey<FormState>();
   final _contentController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final _apiService = ApiService();
+  
   String _selectedType = '建议';
   bool _isSubmitting = false;
+  File? _selectedImage;  // 选中的图片文件
+  String? _imageUrl;     // 上传后的图片URL
 
   @override
   void dispose() {
@@ -21,9 +29,113 @@ class _FeedbackPageState extends State<FeedbackPage> {
     super.dispose();
   }
 
+  /// 隐藏键盘
+  void _hideKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
+
+  /// 选择图片
+  Future<void> _pickImage() async {
+    _hideKeyboard(); // 隐藏键盘
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      EasyLoading.showError('选择图片失败: $e');
+    }
+  }
+
+  /// 拍照
+  Future<void> _takePhoto() async {
+    _hideKeyboard(); // 隐藏键盘
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      EasyLoading.showError('拍照失败: $e');
+    }
+  }
+
+  /// 显示图片选择选项
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('从相册选择'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('拍照'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _takePhoto();
+                },
+              ),
+              if (_selectedImage != null)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('删除图片', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _selectedImage = null;
+                      _imageUrl = null;
+                    });
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('取消'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   /// 提交反馈
   Future<void> _submitFeedback() async {
+    // 验证表单
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // 验证图片（必填）
+    if (_selectedImage == null) {
+      EasyLoading.showError('请选择反馈图片');
       return;
     }
 
@@ -32,27 +144,49 @@ class _FeedbackPageState extends State<FeedbackPage> {
     });
 
     try {
-      // TODO: 调用投诉建议API
-      // await ApiService().submitFeedback(
-      //   type: _selectedType,
-      //   content: _contentController.text.trim(),
-      // );
+      // 1. 先上传图片
+      EasyLoading.show(status: '正在上传图片...');
+      
+      final uploadResponse = await _apiService.uploadSingleFile(_selectedImage!.path);
+      
+      if (!uploadResponse.success || uploadResponse.data == null) {
+        throw Exception('图片上传失败');
+      }
+      
+      _imageUrl = uploadResponse.data;
+      EasyLoading.dismiss();
+      
+      debugPrint('✅ 图片上传成功: $_imageUrl');
 
-      // 模拟网络请求
-      await Future.delayed(const Duration(seconds: 1));
+      // 2. 提交反馈任务到 /api/tasks
+      EasyLoading.show(status: '正在提交...');
+      
+      final response = await _apiService.submitFeedbackTask(
+        taskType: 'feedback',
+        taskName: '投诉建议',
+        taskDescription: _contentController.text.trim(),
+        featureImagePath: _imageUrl!,
+      );
 
-      if (mounted) {
-        EasyLoading.showSuccess('感谢您的反馈！\n我们会认真处理');
-        
-        // 延迟后返回上一页
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        });
+      EasyLoading.dismiss();
+
+      if (response.success) {
+        if (mounted) {
+          EasyLoading.showSuccess('感谢您的反馈！\n我们会认真处理');
+          
+          // 延迟后返回上一页
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        }
+      } else {
+        throw Exception(response.message.isEmpty ? '提交失败' : response.message);
       }
     } catch (e) {
       EasyLoading.showError('提交失败: $e');
+      debugPrint('❌ 提交反馈失败: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -64,16 +198,18 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('投诉建议'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
+    return GestureDetector(
+      onTap: _hideKeyboard, // 点击空白处隐藏键盘
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('投诉建议'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
+        body: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
               // 类型选择
               Container(
                 margin: const EdgeInsets.all(16),
@@ -262,6 +398,15 @@ class _FeedbackPageState extends State<FeedbackPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          '*',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -302,6 +447,161 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         return null;
                       },
                     ),
+                  ],
+                ),
+              ),
+
+              // 图片选择
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          size: 20,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          '反馈图片',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          '*',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (_selectedImage == null)
+                      // 选择图片按钮
+                      InkWell(
+                        onTap: _showImagePickerOptions,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1.5,
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 60,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '点击选择图片',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '支持相册选择或拍照',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      // 图片预览
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              _selectedImage!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Row(
+                              children: [
+                                // 重新选择
+                                InkWell(
+                                  onTap: _showImagePickerOptions,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // 删除
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedImage = null;
+                                      _imageUrl = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -391,7 +691,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

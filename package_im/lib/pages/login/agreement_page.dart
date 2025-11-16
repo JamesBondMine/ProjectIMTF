@@ -107,7 +107,7 @@ class AgreementPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '更新日期：2024年11月14日',
+              '更新日期：2025年11月14日',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -202,7 +202,6 @@ class AgreementPage extends StatelessWidget {
 
 如果您对本隐私协议有任何疑问，或需要行使您的权利，请通过以下方式联系我们：
 • 邮箱：shangluo24244@163.com
-• 电话：400-123-4567
 
 9. 协议更新
 
@@ -298,9 +297,7 @@ class AgreementPage extends StatelessWidget {
 
 如有任何疑问，请联系我们：
 • 邮箱：shangluo24244@163.com
-• 电话：400-123-4567
-• 地址：北京市朝阳区XX路XX号
 
-生效日期：2024年11月14日''';
+生效日期：2025年11月14日''';
 }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../services/remark_service.dart';
 import 'add_friend_page.dart';
 import 'friend_detail_page.dart';
 
@@ -17,6 +19,7 @@ class _FriendListPageState extends State<FriendListPage> {
   List<User> _friendList = [];
   bool _isLoading = false;
   final _apiService = ApiService();
+  final _remarkService = RemarkService();
 
   @override
   void initState() {
@@ -71,20 +74,6 @@ class _FriendListPageState extends State<FriendListPage> {
     );
 
     // 如果添加成功，刷新列表
-    if (result == true) {
-      _loadFriendList();
-    }
-  }
-
-  /// 跳转到好友详情
-  Future<void> _navigateToFriendDetail(User friend) async {
-    final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => FriendDetailPage(friend: friend),
-      ),
-    );
-
-    // 如果从详情页返回且需要刷新（比如删除了好友）
     if (result == true) {
       _loadFriendList();
     }
@@ -262,13 +251,46 @@ class _FriendListPageState extends State<FriendListPage> {
         _deleteFriend(friend);
       },
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-          backgroundImage: friend.avatarUrl != null
-              ? NetworkImage(friend.avatarUrl!)
-              : null,
-          child: friend.avatarUrl == null
-              ? Text(
+        leading: friend.avatarUrl != null
+            ? CircleAvatar(
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                child: ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: friend.avatarUrl!,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).primaryColor.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Center(
+                        child: Text(
+                          friend.nickname.isNotEmpty
+                              ? friend.nickname[0].toUpperCase()
+                              : friend.username[0].toUpperCase(),
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : CircleAvatar(
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                child: Text(
                   friend.nickname.isNotEmpty
                       ? friend.nickname[0].toUpperCase()
                       : friend.username[0].toUpperCase(),
@@ -276,15 +298,21 @@ class _FriendListPageState extends State<FriendListPage> {
                     color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
-                )
-              : null,
-        ),
-        title: Text(
-          friend.nickname.isNotEmpty ? friend.nickname : friend.username,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+                ),
+              ),
+        title: FutureBuilder<String?>(
+          future: _remarkService.getRemark(friend.id),
+          builder: (context, snapshot) {
+            final displayName = snapshot.data ?? 
+                (friend.nickname.isNotEmpty ? friend.nickname : friend.username);
+            return Text(
+              displayName,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            );
+          },
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +383,7 @@ class _FriendListPageState extends State<FriendListPage> {
         ),
         onTap: () {
           // 跳转到好友详情页面
-          _navigateToFriendDetail(friend);
+          _showFriendDetail(friend);
         },
       ),
     );
@@ -374,9 +402,60 @@ class _FriendListPageState extends State<FriendListPage> {
     });
   }
 
-  /// 设置备注对话框（暂时隐藏，因为User模型没有remark字段）
-  void _showRemarkDialog(User friend) {
-    EasyLoading.showInfo('设置备注功能待开发');
+  /// 设置备注对话框
+  void _showRemarkDialog(User friend) async {
+    // 先加载当前备注
+    final currentRemark = await _remarkService.getRemark(friend.id);
+    
+    if (!mounted) return;
+    
+    final remarkController = TextEditingController(text: currentRemark ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('设置备注'),
+        content: TextField(
+          controller: remarkController,
+          autofocus: true,
+          maxLength: 20,
+          decoration: InputDecoration(
+            hintText: '请输入备注名称',
+            border: const OutlineInputBorder(),
+            suffixIcon: remarkController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      remarkController.clear();
+                    },
+                  )
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newRemark = remarkController.text.trim();
+              Navigator.of(context).pop();
+              
+              // 保存备注
+              await _remarkService.setRemark(friend.id, newRemark);
+              
+              // 刷新列表
+              if (mounted) {
+                setState(() {});
+                EasyLoading.showSuccess(newRemark.isEmpty ? '已清除备注' : '备注设置成功');
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

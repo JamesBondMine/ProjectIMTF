@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/chat_conversation.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
+import '../../services/remark_service.dart';
 import '../profile/profile_page.dart';
 import '../friend/add_friend_page.dart';
 import 'chat_page.dart';
@@ -22,6 +24,7 @@ class _ChatListPageState extends State<ChatListPage> {
   List<ChatConversation> _conversationList = [];
   bool _isLoading = false;
   final _apiService = ApiService();
+  final _remarkService = RemarkService();
   Timer? _refreshTimer;  // 定时刷新定时器
 
   @override
@@ -53,8 +56,8 @@ class _ChatListPageState extends State<ChatListPage> {
   void _startAutoRefresh() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
       if (mounted) {
-        debugPrint('🔄 [ChatListPage] 定时刷新会话列表');
-        _loadConversationList();
+        debugPrint('🔄 [ChatListPage] 定时静默刷新会话列表');
+        _silentRefresh(); // 使用静默刷新，避免闪烁
       }
     });
     debugPrint('✅ [ChatListPage] 已启动定时刷新（每8秒）');
@@ -69,11 +72,11 @@ class _ChatListPageState extends State<ChatListPage> {
       
       // 只处理与当前用户相关的消息
       if (message.senderId == currentUserId || message.receiverId == currentUserId) {
-        debugPrint('✅ [ChatListPage] 收到新消息，刷新会话列表');
-        // 延迟一下刷新，确保后端已经更新了会话列表
+        debugPrint('✅ [ChatListPage] 收到新消息，静默刷新会话列表');
+        // 延迟一下刷新，确保后端已经更新了会话列表，使用静默刷新避免闪烁
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            _loadConversationList();
+            _silentRefresh(); // 使用静默刷新，避免闪烁
           }
         });
       }
@@ -108,6 +111,23 @@ class _ChatListPageState extends State<ChatListPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  /// 静默刷新会话列表（不显示加载状态，避免闪烁）
+  Future<void> _silentRefresh() async {
+    try {
+      // 调用API获取会话列表
+      final response = await _apiService.getConversationList();
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _conversationList = response.data!;
+          _sortConversationList();
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [ChatListPage] 静默刷新失败: $e');
     }
   }
 
@@ -254,14 +274,47 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
               );
             },
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: Theme.of(context).primaryColor,
-              backgroundImage: user?.avatarUrl != null
-                  ? NetworkImage(user!.avatarUrl!)
-                  : null,
-              child: user?.avatarUrl == null
-                  ? Text(
+            child: user?.avatarUrl != null
+                ? CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: user!.avatarUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).primaryColor,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Theme.of(context).primaryColor,
+                          child: Center(
+                            child: Text(
+                              user.nickname.isNotEmpty
+                                  ? user.nickname[0].toUpperCase()
+                                  : user.username[0].toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: Text(
                       user?.nickname.isNotEmpty == true
                           ? user!.nickname[0].toUpperCase()
                           : user?.username[0].toUpperCase() ?? '?',
@@ -270,9 +323,8 @@ class _ChatListPageState extends State<ChatListPage> {
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           // 显示用户账号
@@ -454,14 +506,49 @@ class _ChatListPageState extends State<ChatListPage> {
       child: ListTile(
         leading: Stack(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: conversation.targetAvatarUrl != null
-                  ? NetworkImage(conversation.targetAvatarUrl!)
-                  : null,
-              child: conversation.targetAvatarUrl == null
-                  ? Text(
+            conversation.targetAvatarUrl != null
+                ? CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: conversation.targetAvatarUrl!,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Center(
+                            child: Text(
+                              conversation.targetName.isNotEmpty
+                                  ? conversation.targetName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(
                       conversation.targetName.isNotEmpty
                           ? conversation.targetName[0].toUpperCase()
                           : '?',
@@ -470,9 +557,8 @@ class _ChatListPageState extends State<ChatListPage> {
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
             // 未读消息角标
             if (conversation.unreadCount > 0)
               Positioned(
@@ -526,14 +612,20 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
               ),
             Expanded(
-              child: Text(
-                conversation.targetName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: FutureBuilder<String?>(
+                future: _remarkService.getRemark(int.tryParse(conversation.targetId) ?? 0),
+                builder: (context, snapshot) {
+                  final displayName = snapshot.data ?? conversation.targetName;
+                  return Text(
+                    displayName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
               ),
             ),
           ],

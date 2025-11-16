@@ -125,12 +125,6 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                // Logo 和标题
-                Icon(
-                  Icons.lock_outline,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
                 const SizedBox(height: 24),
                 const Text(
                   '欢迎登录',

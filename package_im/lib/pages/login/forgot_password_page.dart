@@ -150,12 +150,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                // 图标和说明
-                Icon(
-                  Icons.lock_reset,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
                 const SizedBox(height: 24),
                 const Text(
                   '重置密码',

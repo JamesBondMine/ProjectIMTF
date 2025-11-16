@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IM应用',
+      title: 'Vendo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -106,7 +106,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'IM应用',
+              'Vendo',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

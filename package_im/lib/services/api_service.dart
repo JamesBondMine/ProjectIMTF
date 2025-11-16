@@ -715,6 +715,41 @@ class ApiService {
     }
   }
 
+  /// 提交反馈任务到 /api/tasks
+  Future<ApiResponse<dynamic>> submitFeedbackTask({
+    required String taskType,
+    required String taskName,
+    required String taskDescription,
+    required String featureImagePath,
+    String? targetImagePath,
+    Map<String, dynamic>? processingParams,
+  }) async {
+    try {
+      debugPrint('提交反馈任务: taskName=$taskName');
+
+      final response = await _httpManager.post(
+        '/api/tasks',
+        data: {
+          'taskType': "BACKGROUND_REMOVAL",
+          'taskName': taskName,
+          'taskDescription': taskDescription,
+          'featureImagePath': featureImagePath,
+          'targetImagePath': featureImagePath,
+        },
+        showLoading: false,
+      );
+
+      if (response.success) {
+        debugPrint('提交反馈任务成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('提交反馈任务异常: $e');
+      rethrow;
+    }
+  }
+
   /// 获取或创建与指定用户的会话
   Future<ApiResponse<ChatConversation>> getConversationWithUser(int targetUserId) async {
     try {

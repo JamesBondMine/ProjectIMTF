@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'dart:io';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
@@ -167,7 +169,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           _buildInfoItem(
-            icon: Icons.email_outlined,
+            imagePath: 'assets/images/youxiang.png',
             title: '邮箱',
             value: user?.email ?? '未设置',
           ),
@@ -194,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           _buildSettingItem(
-            icon: Icons.privacy_tip_outlined,
+            imagePath: 'assets/images/anquanyinsi.png',
             title: '隐私协议',
             onTap: () {
               Navigator.of(context).push(
@@ -209,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const Divider(height: 1, indent: 56),
           _buildSettingItem(
-            icon: Icons.description_outlined,
+            imagePath: 'assets/images/yonghuxieyi.png',
             title: '用户协议',
             onTap: () {
               Navigator.of(context).push(
@@ -224,7 +226,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const Divider(height: 1, indent: 56),
           _buildSettingItem(
-            icon: Icons.feedback_outlined,
+            imagePath: 'assets/images/tousu.png',
             title: '投诉建议',
             onTap: () {
               Navigator.of(context).push(
@@ -236,7 +238,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const Divider(height: 1, indent: 56),
           _buildSettingItem(
-            icon: Icons.info_outlined,
+            imagePath: 'assets/images/guanyu.png',
             title: '关于',
             onTap: () {
               _showAboutDialog();
@@ -249,13 +251,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /// 信息项
   Widget _buildInfoItem({
-    required IconData icon,
+    IconData? icon,
+    String? imagePath,
     required String title,
     required String value,
     Color? valueColor,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey[600]),
+      leading: imagePath != null
+          ? Image.asset(
+              imagePath,
+              width: 24,
+              height: 24,
+              color: Colors.grey[600],
+            )
+          : Icon(icon, color: Colors.grey[600]),
       title: Text(
         title,
         style: const TextStyle(fontSize: 14),
@@ -273,12 +283,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /// 设置项
   Widget _buildSettingItem({
-    required IconData icon,
+    IconData? icon,
+    String? imagePath,
     required String title,
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey[600]),
+      leading: imagePath != null
+          ? Image.asset(
+              imagePath,
+              width: 24,
+              height: 24,
+              color: Colors.grey[600],
+            )
+          : Icon(icon, color: Colors.grey[600]),
       title: Text(title),
       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       onTap: onTap,
@@ -290,7 +308,7 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('关于IM应用'),
+        title: const Text('关于Vendo'),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,10 +382,59 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // 上传图片
-      await _uploadAvatar(image.path);
+      // 显示压缩提示
+      EasyLoading.show(status: '处理中...');
+
+      // 压缩图片（头像不需要很高清晰度）
+      final compressedImage = await _compressImage(image.path);
+      
+      EasyLoading.dismiss();
+
+      if (compressedImage == null) {
+        EasyLoading.showError('图片处理失败');
+        return;
+      }
+
+      // 上传压缩后的图片
+      await _uploadAvatar(compressedImage.path);
     } catch (e) {
+      EasyLoading.dismiss();
       EasyLoading.showError('选择图片失败: $e');
+    }
+  }
+
+  /// 压缩图片（头像专用）
+  Future<XFile?> _compressImage(String filePath) async {
+    try {
+      // 生成压缩后的文件路径
+      final targetPath = filePath.replaceAll('.jpg', '_compressed.jpg')
+          .replaceAll('.png', '_compressed.jpg')
+          .replaceAll('.jpeg', '_compressed.jpg');
+
+      // 压缩图片：头像只需要 512x512，质量 70 就够了
+      final result = await FlutterImageCompress.compressAndGetFile(
+        filePath,
+        targetPath,
+        minWidth: 512,
+        minHeight: 512,
+        quality: 70,
+        format: CompressFormat.jpeg,
+      );
+
+      if (result != null) {
+        // 计算压缩比例
+        final originalSize = await File(filePath).length();
+        final compressedSize = await File(result.path).length();
+        final ratio = ((1 - compressedSize / originalSize) * 100).toInt();
+        
+        debugPrint('✅ 头像压缩完成: ${(originalSize / 1024).toInt()}KB → ${(compressedSize / 1024).toInt()}KB (压缩了 $ratio%)');
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('❌ 图片压缩失败: $e');
+      // 压缩失败时返回原图
+      return XFile(filePath);
     }
   }
 

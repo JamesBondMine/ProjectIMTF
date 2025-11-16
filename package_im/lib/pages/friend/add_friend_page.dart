@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
@@ -271,14 +272,49 @@ class _AddFriendPageState extends State<AddFriendPage> {
       child: Row(
         children: [
           // 头像
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-            backgroundImage: _searchResult!.avatarUrl != null
-                ? NetworkImage(_searchResult!.avatarUrl!)
-                : null,
-            child: _searchResult!.avatarUrl == null
-                ? Text(
+          _searchResult!.avatarUrl != null
+              ? CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: _searchResult!.avatarUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            _searchResult!.nickname.isNotEmpty
+                                ? _searchResult!.nickname[0].toUpperCase()
+                                : _searchResult!.username[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: Text(
                     _searchResult!.nickname.isNotEmpty
                         ? _searchResult!.nickname[0].toUpperCase()
                         : _searchResult!.username[0].toUpperCase(),
@@ -287,9 +323,8 @@ class _AddFriendPageState extends State<AddFriendPage> {
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
-                  )
-                : null,
-          ),
+                  ),
+                ),
           const SizedBox(width: 12),
           // 用户信息
           Expanded(
