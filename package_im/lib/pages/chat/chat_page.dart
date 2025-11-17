@@ -14,7 +14,9 @@ import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
+import '../../services/emoji_pack_service.dart';
 import '../friend/friend_detail_page.dart';
+import '../profile/emoji_manager_page.dart';
 
 /// 聊天页面
 class ChatPage extends StatefulWidget {
@@ -40,32 +42,6 @@ class _ChatPageState extends State<ChatPage> {
   final _imagePicker = ImagePicker();
   bool _isLoading = false;
   String? _friendRemark; // 好友备注
-
-  // GIF表情列表
-  static const List<String> _gifList = [
-    'assets/gif/car-1803_256.gif',
-    'assets/gif/cupid-18601_256.gif',
-    'assets/gif/download-2486_256.gif',
-    'assets/gif/flower-11997_256.gif',
-    'assets/gif/flowers-11015_256.gif',
-    'assets/gif/halloween-22525_256.gif',
-    'assets/gif/hammer-8415_256.gif',
-    'assets/gif/horse-22647_256.gif',
-    'assets/gif/hot-12616_256.gif',
-    'assets/gif/hot-air-balloon-3622_256.gif',
-    'assets/gif/iceland-5543_256.gif',
-    'assets/gif/ladybug-5068_256.gif',
-    'assets/gif/love-3955_256.gif',
-    'assets/gif/paper-23984_256.gif',
-    'assets/gif/pinwheel-8829_256.gif',
-    'assets/gif/pride-6390_256.gif',
-    'assets/gif/rocket-3972_256.gif',
-    'assets/gif/swing-6077_256.gif',
-    'assets/gif/tree-10000_256.gif',
-    'assets/gif/unicorn-16249_256.gif',
-    'assets/gif/wind-21844_256.gif',
-    'assets/gif/winter-16014_256.gif',
-  ];
 
   @override
   void initState() {
@@ -1172,6 +1148,19 @@ class _ChatPageState extends State<ChatPage> {
       child: SafeArea(
         child: Row(
           children: [
+            // 表情按钮
+            IconButton(
+              icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
+              onPressed: () {
+                // 隐藏键盘
+                FocusScope.of(context).unfocus();
+                // 延迟显示表情选择器，等待键盘完全收起
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  _showEmojiPicker();
+                });
+              },
+              tooltip: '表情',
+            ),
             // 输入框
             Expanded(
               child: Container(
@@ -1247,14 +1236,6 @@ class _ChatPageState extends State<ChatPage> {
                       _pickAndSendImage(ImageSource.camera);
                     },
                   ),
-                  _buildMoreOptionItem(
-                    icon: Icons.gif_box,
-                    label: 'GIF',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showGifPicker();
-                    },
-                  ),
                 ],
               ),
             ],
@@ -1302,74 +1283,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /// 显示GIF选择器
-  void _showGifPicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          height: 450,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '选择GIF表情',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '共${_gifList.length}个',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
-                  itemCount: _gifList.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _sendGif(_gifList[index]);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            _gifList[index],
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   /// 发送GIF消息
   Future<void> _sendGif(String gifPath) async {
@@ -1457,6 +1370,318 @@ class _ChatPageState extends State<ChatPage> {
       }
       debugPrint('❌ 发送GIF失败: $e');
     }
+  }
+
+  /// 显示表情选择器
+  void _showEmojiPicker() async {
+    // 加载已启用的表情包
+    final emojiPackService = EmojiPackService();
+    final enabledPacks = await emojiPackService.getEnabledPacks();
+    
+    // 常用表情列表
+    final List<String> emojiList = [
+      // 笑脸类
+      '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+      '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+      '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜',
+      '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
+      // 情绪类
+      '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
+      '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒',
+      '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵',
+      '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕',
+      // 伤心类
+      '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺',
+      '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱',
+      '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤',
+      // 生气类
+      '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩',
+      // 手势类
+      '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏',
+      '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+      '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛',
+      '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️',
+      // 爱心类
+      '💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟',
+      '❣️', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜',
+      '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦',
+      // 其他
+      '💨', '🕳️', '💣', '💬', '👁️', '🗨️', '💤', '💮',
+    ];
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: 450,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题栏
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '选择表情',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              // GIF表情包分类（包含添加按钮）
+              const SizedBox(height: 8),
+              Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: enabledPacks.length + 1, // +1 for the add button
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  itemBuilder: (context, index) {
+                    // 最后一项显示添加按钮
+                    if (index == enabledPacks.length) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          // 跳转到表情管理页面
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const EmojiManagerPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 54,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context).primaryColor.withOpacity(0.5),
+                              width: 2,
+                              style: BorderStyle.solid,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_circle_outline,
+                                size: 28,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    // 显示表情包图标
+                    final pack = enabledPacks[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showGifPackPicker(pack);
+                      },
+                      child: Container(
+                        width: 54,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              pack.icon,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: Colors.grey[300]),
+              const SizedBox(height: 12),
+              // 文字表情网格
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 8,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: emojiList.length,
+                  itemBuilder: (context, index) {
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _insertEmoji(emojiList[index]);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: Text(
+                            emojiList[index],
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 显示GIF表情包选择器
+  void _showGifPackPicker(EmojiPack pack) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: 450,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        pack.icon,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        pack.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        '共${pack.gifs.length}个',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: pack.gifs.length,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _sendGif(pack.gifs[index]);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            pack.gifs[index],
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 插入表情到输入框
+  void _insertEmoji(String emoji) {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    
+    // 在光标位置插入表情
+    final newText = text.replaceRange(
+      selection.start,
+      selection.end,
+      emoji,
+    );
+    
+    // 更新输入框内容
+    _messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: selection.start + emoji.length,
+      ),
+    );
   }
 
   /// 格式化时间

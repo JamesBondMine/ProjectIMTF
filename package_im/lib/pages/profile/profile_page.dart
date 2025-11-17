@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
 import 'feedback_page.dart';
+import 'emoji_manager_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
@@ -232,6 +233,18 @@ class _ProfilePageState extends State<ProfilePage> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const FeedbackPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            icon: Icons.emoji_emotions_rounded,
+            title: '表情管理',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const EmojiManagerPage(),
                 ),
               );
             },
