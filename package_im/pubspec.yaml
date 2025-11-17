@@ -62,6 +62,8 @@ dependencies:
   video_player: ^2.9.2
   # 视频播放器UI增强
   chewie: ^1.8.5
+  # 音频播放器
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
