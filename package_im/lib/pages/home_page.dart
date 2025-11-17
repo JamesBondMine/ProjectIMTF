@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
+import 'profile/profile_page.dart';
 import 'package:package_im/services/api_service.dart';
 
 /// 主页（底部导航栏）
@@ -21,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = const [
     ChatListPage(),
     FriendListPage(),
+    ProfilePage(),
   ];
 
   @override
@@ -81,6 +83,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
             label: '好友',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: '我的',
           ),
         ],
       ),

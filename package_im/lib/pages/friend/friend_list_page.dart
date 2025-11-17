@@ -252,51 +252,62 @@ class _FriendListPageState extends State<FriendListPage> {
       },
       child: ListTile(
         leading: friend.avatarUrl != null
-            ? CircleAvatar(
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: friend.avatarUrl!,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).primaryColor.withOpacity(0.5),
-                          ),
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: friend.avatarUrl!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    width: 48,
+                    height: 48,
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).primaryColor.withOpacity(0.5),
                         ),
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Center(
-                        child: Text(
-                          friend.nickname.isNotEmpty
-                              ? friend.nickname[0].toUpperCase()
-                              : friend.username[0].toUpperCase(),
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    width: 48,
+                    height: 48,
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Center(
+                      child: Text(
+                        friend.nickname.isNotEmpty
+                            ? friend.nickname[0].toUpperCase()
+                            : friend.username[0].toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
                 ),
               )
-            : CircleAvatar(
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: Text(
-                  friend.nickname.isNotEmpty
-                      ? friend.nickname[0].toUpperCase()
-                      : friend.username[0].toUpperCase(),
-                  style: TextStyle(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.bold,
+            : Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    friend.nickname.isNotEmpty
+                        ? friend.nickname[0].toUpperCase()
+                        : friend.username[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

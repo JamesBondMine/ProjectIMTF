@@ -8,7 +8,6 @@ import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
-import '../profile/profile_page.dart';
 import '../friend/add_friend_page.dart';
 import 'chat_page.dart';
 
@@ -265,67 +264,58 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       child: Row(
         children: [
-          // 用户头像（可点击）
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
-              );
-            },
-            child: user?.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: user!.avatarUrl!,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor,
-                          child: Center(
-                            child: Text(
-                              user.nickname.isNotEmpty
-                                  ? user.nickname[0].toUpperCase()
-                                  : user.username[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+          // 用户头像
+          user?.avatarUrl != null
+              ? CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: user!.avatarUrl!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Theme.of(context).primaryColor,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: Text(
-                      user?.nickname.isNotEmpty == true
-                          ? user!.nickname[0].toUpperCase()
-                          : user?.username[0].toUpperCase() ?? '?',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                      errorWidget: (context, url, error) => Container(
+                        color: Theme.of(context).primaryColor,
+                        child: Center(
+                          child: Text(
+                            user.nickname.isNotEmpty
+                                ? user.nickname[0].toUpperCase()
+                                : user.username[0].toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-          ),
+                )
+              : CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: Text(
+                    user?.nickname.isNotEmpty == true
+                        ? user!.nickname[0].toUpperCase()
+                        : user?.username[0].toUpperCase() ?? '?',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
           const SizedBox(width: 12),
           // 显示用户账号
           Expanded(
@@ -507,55 +497,62 @@ class _ChatListPageState extends State<ChatListPage> {
         leading: Stack(
           children: [
             conversation.targetAvatarUrl != null
-                ? CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: conversation.targetAvatarUrl!,
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: conversation.targetAvatarUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
                         width: 56,
                         height: 56,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor.withOpacity(0.5),
-                              ),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: Text(
-                              conversation.targetName.isNotEmpty
-                                  ? conversation.targetName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 56,
+                        height: 56,
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            conversation.targetName.isNotEmpty
+                                ? conversation.targetName[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
                     ),
                   )
-                : CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      conversation.targetName.isNotEmpty
-                          ? conversation.targetName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
+                : Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        conversation.targetName.isNotEmpty
+                            ? conversation.targetName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

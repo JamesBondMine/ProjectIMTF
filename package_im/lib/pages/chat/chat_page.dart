@@ -606,63 +606,70 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         titleSpacing: 0,
         title: Row(
           children: [
-            // 头像
+            // 头像（方形）
             widget.friend.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: widget.friend.avatarUrl!,
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.friend.avatarUrl!,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
                         width: 36,
                         height: 36,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor.withOpacity(0.5),
-                              ),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: Text(
-                              widget.friend.nickname.isNotEmpty
-                                  ? widget.friend.nickname[0].toUpperCase()
-                                  : widget.friend.username[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 36,
+                        height: 36,
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            widget.friend.nickname.isNotEmpty
+                                ? widget.friend.nickname[0].toUpperCase()
+                                : widget.friend.username[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
                     ),
                   )
-                : CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      widget.friend.nickname.isNotEmpty
-                          ? widget.friend.nickname[0].toUpperCase()
-                          : widget.friend.username[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
+                : Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.friend.nickname.isNotEmpty
+                            ? widget.friend.nickname[0].toUpperCase()
+                            : widget.friend.username[0].toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -719,23 +726,35 @@ class _ChatPageState extends State<ChatPage> {
         },
         child: Column(
           children: [
-            // 消息列表
+            // 消息列表（带背景图）
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _messages.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 16,
-                          ),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            return _buildMessageItem(_messages[index]);
-                          },
-                        ),
+              child: Stack(
+                children: [
+                  // 背景图片
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/chat_bg.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  // 消息列表
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _messages.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 16,
+                              ),
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                return _buildMessageItem(_messages[index]);
+                              },
+                            ),
+                ],
+              ),
             ),
             // 输入框
             _buildInputArea(),
@@ -786,58 +805,65 @@ class _ChatPageState extends State<ChatPage> {
             message.isSentByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 对方头像（左侧）
+          // 对方头像（左侧，方形）
           if (!message.isSentByMe) ...[
             widget.friend.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: widget.friend.avatarUrl!,
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.friend.avatarUrl!,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
                         width: 36,
                         height: 36,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor.withOpacity(0.5),
-                              ),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: Text(
-                              widget.friend.nickname.isNotEmpty
-                                  ? widget.friend.nickname[0].toUpperCase()
-                                  : widget.friend.username[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 36,
+                        height: 36,
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            widget.friend.nickname.isNotEmpty
+                                ? widget.friend.nickname[0].toUpperCase()
+                                : widget.friend.username[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
                     ),
                   )
-                : CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      widget.friend.nickname.isNotEmpty
-                          ? widget.friend.nickname[0].toUpperCase()
-                          : widget.friend.username[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
+                : Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.friend.nickname.isNotEmpty
+                            ? widget.friend.nickname[0].toUpperCase()
+                            : widget.friend.username[0].toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -870,59 +896,66 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           ),
-          // 自己的头像（右侧）
+          // 自己的头像（右侧，方形）
           if (message.isSentByMe) ...[
             const SizedBox(width: 8),
             _apiService.currentUser?.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: _apiService.currentUser!.avatarUrl!,
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CachedNetworkImage(
+                      imageUrl: _apiService.currentUser!.avatarUrl!,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
                         width: 36,
                         height: 36,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor.withOpacity(0.5),
-                              ),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor.withOpacity(0.5),
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: Text(
-                              _apiService.currentUser?.nickname.isNotEmpty == true
-                                  ? _apiService.currentUser!.nickname[0].toUpperCase()
-                                  : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 36,
+                        height: 36,
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: Text(
+                            _apiService.currentUser?.nickname.isNotEmpty == true
+                                ? _apiService.currentUser!.nickname[0].toUpperCase()
+                                : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
                     ),
                   )
-                : CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      _apiService.currentUser?.nickname.isNotEmpty == true
-                          ? _apiService.currentUser!.nickname[0].toUpperCase()
-                          : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
+                : Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _apiService.currentUser?.nickname.isNotEmpty == true
+                            ? _apiService.currentUser!.nickname[0].toUpperCase()
+                            : _apiService.currentUser?.username[0].toUpperCase() ?? '?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

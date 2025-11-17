@@ -165,57 +165,64 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
       ),
       child: Column(
         children: [
-          // 头像
+          // 头像（方形）
           _currentFriend.avatarUrl != null
-              ? CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  child: ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: _currentFriend.avatarUrl!,
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: _currentFriend.avatarUrl!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
                       width: 100,
                       height: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).primaryColor.withOpacity(0.5),
-                            ),
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).primaryColor.withOpacity(0.5),
                           ),
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        child: Center(
-                          child: Text(
-                            _currentFriend.nickname.isNotEmpty
-                                ? _currentFriend.nickname[0].toUpperCase()
-                                : _currentFriend.username[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 40,
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 100,
+                      height: 100,
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Center(
+                        child: Text(
+                          _currentFriend.nickname.isNotEmpty
+                              ? _currentFriend.nickname[0].toUpperCase()
+                              : _currentFriend.username[0].toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 40,
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
                   ),
                 )
-              : CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  child: Text(
-                    _currentFriend.nickname.isNotEmpty
-                        ? _currentFriend.nickname[0].toUpperCase()
-                        : _currentFriend.username[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 40,
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
+              : Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _currentFriend.nickname.isNotEmpty
+                          ? _currentFriend.nickname[0].toUpperCase()
+                          : _currentFriend.username[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 40,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
