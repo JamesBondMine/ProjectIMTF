@@ -56,14 +56,12 @@ dependencies:
   permission_handler: ^11.3.1
   # 路径提供
   path_provider: ^2.1.5
-  # 路径提供
-  path_provider: ^2.1.5
-  # 路径提供
-  path_provider: ^2.1.5
-  # 路径提供
-  path_provider: ^2.1.5
-  # 路径提供
-  path_provider: ^2.1.5
+  # URL启动器
+  url_launcher: ^6.3.0
+  # 视频播放器
+  video_player: ^2.9.2
+  # 视频播放器UI增强
+  chewie: ^1.8.5
 
 dev_dependencies:
   flutter_test:
