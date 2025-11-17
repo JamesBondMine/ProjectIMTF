@@ -214,12 +214,13 @@ class _ChatListPageState extends State<ChatListPage> {
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
     );
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       body: Column(
         children: [
           // 顶部用户头像区域（包含状态栏）
@@ -227,6 +228,7 @@ class _ChatListPageState extends State<ChatListPage> {
           // 聊天列表（包含下拉刷新）
           Expanded(
             child: RefreshIndicator(
+              color: Theme.of(context).primaryColor,
               onRefresh: _loadConversationList,
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -247,76 +249,98 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Container(
       padding: EdgeInsets.only(
-        top: statusBarHeight + 12,  // 状态栏高度 + 额外间距
-        left: 16,
-        right: 16,
-        bottom: 12,
+        top: statusBarHeight + 16,  // 状态栏高度 + 额外间距
+        left: 20,
+        right: 20,
+        bottom: 20,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
           // 用户头像
-          user?.avatarUrl != null
-              ? CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: user!.avatarUrl!,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Theme.of(context).primaryColor,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 2,
+              ),
+            ),
+            child: user?.avatarUrl != null
+                ? CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.white,
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: user!.avatarUrl!,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Colors.white,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Theme.of(context).primaryColor,
-                        child: Center(
-                          child: Text(
-                            user.nickname.isNotEmpty
-                                ? user.nickname[0].toUpperCase()
-                                : user.username[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.white,
+                          child: Center(
+                            child: Text(
+                              user.nickname.isNotEmpty
+                                  ? user.nickname[0].toUpperCase()
+                                  : user.username[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                )
-              : CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: Text(
-                    user?.nickname.isNotEmpty == true
-                        ? user!.nickname[0].toUpperCase()
-                        : user?.username[0].toUpperCase() ?? '?',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  )
+                : CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      user?.nickname.isNotEmpty == true
+                          ? user!.nickname[0].toUpperCase()
+                          : user?.username[0].toUpperCase() ?? '?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-          const SizedBox(width: 12),
+          ),
+          const SizedBox(width: 16),
           // 显示用户账号
           Expanded(
             child: Column(
@@ -328,8 +352,9 @@ class _ChatListPageState extends State<ChatListPage> {
                       ? user!.nickname
                       : user?.username ?? '用户',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -337,9 +362,9 @@ class _ChatListPageState extends State<ChatListPage> {
                 if (user?.username != null)
                   Text(
                     user!.username,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -348,19 +373,25 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ),
           // 搜索好友按钮
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const AddFriendPage(),
-                ),
-              ).then((_) {
-                // 从添加好友页面返回后刷新会话列表
-                _loadConversationList();
-              });
-            },
-            tooltip: '添加好友',
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddFriendPage(),
+                  ),
+                ).then((_) {
+                  // 从添加好友页面返回后刷新会话列表
+                  _loadConversationList();
+                });
+              },
+              tooltip: '添加好友',
+            ),
           ),
         ],
       ),
@@ -422,17 +453,16 @@ class _ChatListPageState extends State<ChatListPage> {
 
   /// 会话列表
   Widget _buildConversationList() {
-    return ListView.separated(
+    return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
       itemCount: _conversationList.length,
-      separatorBuilder: (context, index) => const Divider(
-        height: 1,
-        indent: 72,
-      ),
       itemBuilder: (context, index) {
         final conversation = _conversationList[index];
-        return _buildConversationItem(conversation);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildConversationItem(conversation),
+        );
       },
     );
   }
@@ -493,8 +523,21 @@ class _ChatListPageState extends State<ChatListPage> {
           _deleteConversation(conversation);
         }
       },
-      child: ListTile(
-        leading: Stack(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          leading: Stack(
           children: [
             conversation.targetAvatarUrl != null
                 ? ClipRRect(
@@ -706,6 +749,7 @@ class _ChatListPageState extends State<ChatListPage> {
             _loadConversationList();
           });
         },
+        ),
       ),
     );
   }
