@@ -248,24 +248,24 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Container(
       padding: EdgeInsets.only(
-        top: statusBarHeight + 12,  // 状态栏高度 + 额外间距
-        left: 16,
-        right: 16,
-        bottom: 12,
+        top: statusBarHeight + 16,  // 状态栏高度 + 额外间距
+        left: 20,
+        right: 20,
+        bottom: 16,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
-          // 用户头像（可点击）
+          // 用户头像（可点击）- 加大尺寸
           GestureDetector(
             onTap: () {
               Navigator.of(context).push(
@@ -274,59 +274,71 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
               );
             },
-            child: user?.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: user!.avatarUrl!,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: user?.avatarUrl != null
+                  ? CircleAvatar(
+                      radius: 26,  // 从20增大到26
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: user!.avatarUrl!,
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Theme.of(context).primaryColor,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
                             ),
                           ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor,
-                          child: Center(
-                            child: Text(
-                              user.nickname.isNotEmpty
-                                  ? user.nickname[0].toUpperCase()
-                                  : user.username[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                          errorWidget: (context, url, error) => Container(
+                            color: Theme.of(context).primaryColor,
+                            child: Center(
+                              child: Text(
+                                user.nickname.isNotEmpty
+                                    ? user.nickname[0].toUpperCase()
+                                    : user.username[0].toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 22,  // 字体也相应增大
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: Text(
-                      user?.nickname.isNotEmpty == true
-                          ? user!.nickname[0].toUpperCase()
-                          : user?.username[0].toUpperCase() ?? '?',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    )
+                  : CircleAvatar(
+                      radius: 26,  // 从20增大到26
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: Text(
+                        user?.nickname.isNotEmpty == true
+                            ? user!.nickname[0].toUpperCase()
+                            : user?.username[0].toUpperCase() ?? '?',
+                        style: const TextStyle(
+                          fontSize: 22,  // 字体也相应增大
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),  // 增加间距
           // 显示用户账号
           Expanded(
             child: Column(
@@ -338,18 +350,21 @@ class _ChatListPageState extends State<ChatListPage> {
                       ? user!.nickname
                       : user?.username ?? '用户',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,  // 从18增大到20
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 if (user?.username != null)
                   Text(
                     user!.username,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,  // 从12增大到13
                       color: Colors.grey[600],
+                      letterSpacing: 0.3,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -358,19 +373,28 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ),
           // 搜索好友按钮
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const AddFriendPage(),
-                ),
-              ).then((_) {
-                // 从添加好友页面返回后刷新会话列表
-                _loadConversationList();
-              });
-            },
-            tooltip: '添加好友',
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.person_add_rounded,
+                color: Theme.of(context).primaryColor,
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddFriendPage(),
+                  ),
+                ).then((_) {
+                  // 从添加好友页面返回后刷新会话列表
+                  _loadConversationList();
+                });
+              },
+              tooltip: '添加好友',
+            ),
           ),
         ],
       ),
@@ -391,34 +415,63 @@ class _ChatListPageState extends State<ChatListPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 120,
-                    color: Colors.grey[300],
+                  // 空状态图标 - 优化样式
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 80,
+                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   Text(
                     '暂无聊天',
                     style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+                      fontSize: 22,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     '去好友列表找人聊天吧',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       color: Colors.grey[500],
+                      letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '下拉刷新',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
+                  const SizedBox(height: 24),
+                  // 下拉刷新提示
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 16,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '下拉刷新',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -434,11 +487,14 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget _buildConversationList() {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: _conversationList.length,
-      separatorBuilder: (context, index) => const Divider(
+      separatorBuilder: (context, index) => Divider(
         height: 1,
-        indent: 72,
+        thickness: 0.5,
+        indent: 88,  // 对齐头像右侧
+        endIndent: 20,
+        color: Colors.grey[200],
       ),
       itemBuilder: (context, index) {
         final conversation = _conversationList[index];
@@ -504,75 +560,100 @@ class _ChatListPageState extends State<ChatListPage> {
         }
       },
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),  // 增加内边距
         leading: Stack(
           children: [
-            conversation.targetAvatarUrl != null
-                ? CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: conversation.targetAvatarUrl!,
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor.withOpacity(0.5),
-                              ),
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Center(
-                            child: Text(
-                              conversation.targetName.isNotEmpty
-                                  ? conversation.targetName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      conversation.targetName.isNotEmpty
-                          ? conversation.targetName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            // 好友头像 - 缩小尺寸
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-            // 未读消息角标
+                ],
+              ),
+              child: conversation.targetAvatarUrl != null
+                  ? CircleAvatar(
+                      radius: 24,  // 从28缩小到24
+                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: conversation.targetAvatarUrl!,
+                          width: 48,  // 从56缩小到48
+                          height: 48,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).primaryColor.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            child: Center(
+                              child: Text(
+                                conversation.targetName.isNotEmpty
+                                    ? conversation.targetName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  fontSize: 18,  // 从20缩小到18
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : CircleAvatar(
+                      radius: 24,  // 从28缩小到24
+                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Text(
+                        conversation.targetName.isNotEmpty
+                            ? conversation.targetName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 18,  // 从20缩小到18
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+            ),
+            // 未读消息角标 - 优化样式和位置
             if (conversation.unreadCount > 0)
               Positioned(
-                right: 0,
-                top: 0,
+                right: -2,
+                top: -2,
                 child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
                     color: Colors.red,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
+                    minWidth: 20,
+                    minHeight: 20,
                   ),
                   child: Text(
                     conversation.unreadCount > 99
@@ -580,8 +661,9 @@ class _ChatListPageState extends State<ChatListPage> {
                         : conversation.unreadCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
+                      height: 1.2,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -591,24 +673,24 @@ class _ChatListPageState extends State<ChatListPage> {
         ),
         title: Row(
           children: [
-            // 置顶图标
+            // 置顶图标 - 优化样式
             if (conversation.isPinned)
-              const Padding(
-                padding: EdgeInsets.only(right: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
                 child: Icon(
-                  Icons.push_pin,
-                  size: 14,
-                  color: Colors.orange,
+                  Icons.push_pin_rounded,
+                  size: 16,
+                  color: Colors.orange[700],
                 ),
               ),
-            // 免打扰图标
+            // 免打扰图标 - 优化样式
             if (conversation.isMuted)
-              const Padding(
-                padding: EdgeInsets.only(right: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
                 child: Icon(
-                  Icons.notifications_off,
-                  size: 14,
-                  color: Colors.grey,
+                  Icons.notifications_off_rounded,
+                  size: 16,
+                  color: Colors.grey[500],
                 ),
               ),
             Expanded(
@@ -618,9 +700,11 @@ class _ChatListPageState extends State<ChatListPage> {
                   final displayName = snapshot.data ?? conversation.targetName;
                   return Text(
                     displayName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      fontSize: 17,  // 从16增大到17
+                      fontWeight: FontWeight.w600,  // 从w500加粗到w600
+                      color: Colors.black87,
+                      letterSpacing: 0.3,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -630,55 +714,84 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ],
         ),
-        subtitle: Text(
-          _formatLastMessage(conversation.lastMessage),
-          style: TextStyle(
-            fontSize: 14,
-            color: conversation.unreadCount > 0
-                ? Colors.black87
-                : Colors.grey[600],
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _formatTime(conversation.lastMessageTime),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
-              ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),  // 增加标题和副标题的间距
+          child: Text(
+            _formatLastMessage(conversation.lastMessage),
+            style: TextStyle(
+              fontSize: 14,
+              color: conversation.unreadCount > 0
+                  ? Colors.black.withOpacity(0.7)  // 未读消息深色
+                  : Colors.grey[600],  // 已读消息灰色
+              height: 1.3,
+              letterSpacing: 0.2,
             ),
-            const SizedBox(height: 4),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_horiz, size: 20),
-              onSelected: (value) {
-                if (value == 'delete') {
-                  _showDeleteDialog(conversation);
-                } else if (value == 'pin') {
-                  _togglePin(conversation);
-                } else if (value == 'mute') {
-                  _toggleMute(conversation);
-                }
-              },
-              itemBuilder: (context) => [
-
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('删除会话', style: TextStyle(color: Colors.red)),
-                    ],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        trailing: SizedBox(
+          width: 80,  // 固定宽度，避免布局抖动
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // 时间显示 - 优化样式
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: conversation.unreadCount > 0 
+                      ? Theme.of(context).primaryColor.withOpacity(0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _formatTime(conversation.lastMessageTime),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: conversation.unreadCount > 0
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey[500],
+                    fontWeight: conversation.unreadCount > 0 
+                        ? FontWeight.w600 
+                        : FontWeight.normal,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              // 更多按钮 - 优化样式
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  size: 20,
+                  color: Colors.grey[400],
+                ),
+                padding: EdgeInsets.zero,
+                iconSize: 20,
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _showDeleteDialog(conversation);
+                  } else if (value == 'pin') {
+                    _togglePin(conversation);
+                  } else if (value == 'mute') {
+                    _toggleMute(conversation);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text('删除会话', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         onTap: () {
           // 跳转到聊天页面
