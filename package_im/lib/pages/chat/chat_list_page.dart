@@ -744,21 +744,21 @@ class _ChatListPageState extends State<ChatListPage> {
   String _formatLastMessage(String message) {
     // 判断是否是URL格式的消息
     if (message.startsWith('http://') || message.startsWith('https://')) {
-      // 判断是否是视频URL
-      if (message.endsWith('.mp4') || 
-          message.endsWith('.mov') || 
-          message.endsWith('.avi') || 
-          message.endsWith('.mkv') || 
-          message.endsWith('.m4v')) {
+      final lowerMessage = message.toLowerCase();
+      
+      // 判断是否是视频URL（与 chat_page.dart 保持一致）
+      final videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.webm', '.m4v'];
+      if (videoExtensions.any((ext) => lowerMessage.endsWith(ext))) {
         return '[视频]';
       }
+      
       // 判断是否是图片URL（包含常见图片扩展名或来自文件服务）
       if (message.contains('/files/') || 
-          message.endsWith('.jpg') || 
-          message.endsWith('.jpeg') || 
-          message.endsWith('.png') || 
-          message.endsWith('.gif') || 
-          message.endsWith('.webp')) {
+          lowerMessage.endsWith('.jpg') || 
+          lowerMessage.endsWith('.jpeg') || 
+          lowerMessage.endsWith('.png') || 
+          lowerMessage.endsWith('.gif') || 
+          lowerMessage.endsWith('.webp')) {
         return '[图片]';
       }
     }
