@@ -169,6 +169,20 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
+          _buildEditableInfoItem(
+            icon: Icons.person_outline,
+            title: '昵称',
+            value: user?.nickname ?? '未设置',
+            onTap: _showEditNicknameDialog,
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildEditableInfoItem(
+            icon: Icons.phone_outlined,
+            title: '手机号',
+            value: user?.phone ?? '未设置',
+            onTap: _showEditPhoneDialog,
+          ),
+          const Divider(height: 1, indent: 56),
           _buildInfoItem(
             imagePath: 'assets/images/youxiang.png',
             title: '邮箱',
@@ -291,6 +305,46 @@ class _ProfilePageState extends State<ProfilePage> {
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+
+  /// 可编辑的信息项
+  Widget _buildEditableInfoItem({
+    IconData? icon,
+    String? imagePath,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: imagePath != null
+          ? Image.asset(
+              imagePath,
+              width: 24,
+              height: 24,
+              color: Colors.grey[600],
+            )
+          : Icon(icon, color: Colors.grey[600]),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+        ],
+      ),
+      onTap: onTap,
     );
   }
 
@@ -483,6 +537,157 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       EasyLoading.showError('上传失败: $e');
+    }
+  }
+
+  /// 显示修改昵称对话框
+  void _showEditNicknameDialog() {
+    final user = _apiService.currentUser;
+    final TextEditingController nicknameController = TextEditingController(
+      text: user?.nickname ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('修改昵称'),
+          content: TextField(
+            controller: nicknameController,
+            autofocus: true,
+            maxLength: 20,
+            decoration: const InputDecoration(
+              hintText: '请输入新昵称',
+              border: OutlineInputBorder(),
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                final newNickname = nicknameController.text.trim();
+                if (newNickname.isEmpty) {
+                  EasyLoading.showError('昵称不能为空');
+                  return;
+                }
+                Navigator.of(context).pop();
+                _updateNickname(newNickname);
+              },
+              child: Text(
+                '确定',
+                style: TextStyle(color: Theme.of(context).primaryColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 更新昵称
+  Future<void> _updateNickname(String nickname) async {
+    try {
+      EasyLoading.show(status: '更新中...');
+
+      final result = await _apiService.updateUserInfo(nickname: nickname);
+
+      if (result.success) {
+        EasyLoading.showSuccess('昵称更新成功');
+        
+        // 刷新UI
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        EasyLoading.showError(result.message.isEmpty ? '昵称更新失败' : result.message);
+      }
+    } catch (e) {
+      EasyLoading.showError('更新失败: $e');
+    }
+  }
+
+  /// 显示修改手机号对话框
+  void _showEditPhoneDialog() {
+    final user = _apiService.currentUser;
+    final TextEditingController phoneController = TextEditingController(
+      text: user?.phone ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('设置手机号'),
+          content: TextField(
+            controller: phoneController,
+            autofocus: true,
+            keyboardType: TextInputType.phone,
+            maxLength: 11,
+            decoration: const InputDecoration(
+              hintText: '请输入手机号',
+              border: OutlineInputBorder(),
+              counterText: '',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                final newPhone = phoneController.text.trim();
+                if (newPhone.isEmpty) {
+                  EasyLoading.showError('手机号不能为空');
+                  return;
+                }
+                // 简单的手机号格式验证
+                if (newPhone.length != 11 || !RegExp(r'^1[3-9]\d{9}$').hasMatch(newPhone)) {
+                  EasyLoading.showError('请输入正确的手机号格式');
+                  return;
+                }
+                Navigator.of(context).pop();
+                _updatePhone(newPhone);
+              },
+              child: Text(
+                '确定',
+                style: TextStyle(color: Theme.of(context).primaryColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 更新手机号
+  Future<void> _updatePhone(String phone) async {
+    try {
+      EasyLoading.show(status: '更新中...');
+
+      final result = await _apiService.updateUserInfo(phone: phone);
+
+      if (result.success) {
+        EasyLoading.showSuccess('手机号更新成功');
+        
+        // 刷新UI
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        EasyLoading.showError(result.message.isEmpty ? '手机号更新失败' : result.message);
+      }
+    } catch (e) {
+      EasyLoading.showError('更新失败: $e');
     }
   }
 
