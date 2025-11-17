@@ -253,7 +253,7 @@ class AgreementPage extends StatelessWidget {
 • 我们不会收集您的通讯录、位置、剪贴板等敏感信息
 • 第三方SDK不会在后台自动收集或上传您的个人信息
 
-如有任何疑问，请通过邮箱 shangluo24244@163.com 联系我们了解更多信息。
+如有任何疑问，请通过邮箱 qikuazc@163.com 联系我们了解更多信息。
 
 7. 未成年人保护
 
@@ -262,7 +262,7 @@ class AgreementPage extends StatelessWidget {
 8. 联系我们
 
 如果您对本隐私协议有任何疑问，或需要行使您的权利，请通过以下方式联系我们：
-• 邮箱：shangluo24244@163.com
+• 邮箱：qikuazc@163.com
 
 9. 协议更新
 
@@ -357,7 +357,7 @@ class AgreementPage extends StatelessWidget {
 10. 联系方式
 
 如有任何疑问，请联系我们：
-• 邮箱：shangluo24244@163.com
+• 邮箱：qikuazc@163.com
 
 生效日期：2025年11月14日''';
 }
