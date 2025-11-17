@@ -742,8 +742,16 @@ class _ChatListPageState extends State<ChatListPage> {
 
   /// 格式化最后一条消息
   String _formatLastMessage(String message) {
-    // 判断是否是图片消息（URL格式）
+    // 判断是否是URL格式的消息
     if (message.startsWith('http://') || message.startsWith('https://')) {
+      // 判断是否是视频URL
+      if (message.endsWith('.mp4') || 
+          message.endsWith('.mov') || 
+          message.endsWith('.avi') || 
+          message.endsWith('.mkv') || 
+          message.endsWith('.m4v')) {
+        return '[视频]';
+      }
       // 判断是否是图片URL（包含常见图片扩展名或来自文件服务）
       if (message.contains('/files/') || 
           message.endsWith('.jpg') || 

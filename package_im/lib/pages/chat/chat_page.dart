@@ -10,6 +10,8 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
@@ -141,6 +143,7 @@ class _ChatPageState extends State<ChatPage> {
           timestamp: DateTime.parse(message.createdAt),
           messageType: message.messageType,
           imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+          videoUrl: message.messageType == 'VIDEO' ? message.content : null,
         );
         
         if (mounted) {
@@ -206,6 +209,7 @@ class _ChatPageState extends State<ChatPage> {
             timestamp: DateTime.parse(message.createdAt),
             messageType: message.messageType,
             imageUrl: message.messageType == 'IMAGE' ? message.content : null,
+            videoUrl: message.messageType == 'VIDEO' ? message.content : null,
           );
         }).toList();
 
@@ -496,6 +500,96 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 选择并发送视频
+  Future<void> _pickAndSendVideo(ImageSource source) async {
+    try {
+      // 1. 选择视频
+      final XFile? video = await _imagePicker.pickVideo(
+        source: source,
+        maxDuration: const Duration(minutes: 5), // 最长5分钟
+      );
+
+      if (video == null) return;
+
+      // 显示加载提示
+      EasyLoading.show(status: '上传中...');
+
+      // 2. 上传视频获取URL（暂时跳过压缩步骤，直接上传原视频）
+      final uploadResult = await _apiService.uploadSingleFile(video.path);
+
+      if (!uploadResult.success || uploadResult.data == null) {
+        EasyLoading.showError('视频上传失败');
+        return;
+      }
+
+      String videoUrl = uploadResult.data!;
+      debugPrint('✅ 视频上传成功: $videoUrl');
+
+      // 3. 先添加到本地列表（乐观更新）
+      final tempMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: '[视频]',
+        isSentByMe: true,
+        timestamp: DateTime.now(),
+        messageType: 'VIDEO',
+        videoUrl: videoUrl,
+      );
+
+      setState(() {
+        _messages.add(tempMessage);
+      });
+
+      // 滚动到底部
+      _scrollToBottom();
+
+      // 4. 发送视频消息
+      bool success = false;
+
+      // 优先尝试通过 WebSocket 发送
+      if (_apiService.isChatWebSocketConnected) {
+        debugPrint('📤 尝试通过 WebSocket 发送视频...');
+        success = await _apiService.sendMessageViaWebSocket(
+          receiverId: widget.friend.id,
+          content: videoUrl,
+          messageType: 'VIDEO',
+        );
+        
+        if (success) {
+          debugPrint('✅ WebSocket 发送视频成功');
+          EasyLoading.dismiss();
+          return;
+        } else {
+          debugPrint('⚠️ WebSocket 发送视频失败，降级到 HTTP');
+        }
+      } else {
+        debugPrint('⚠️ WebSocket 未连接，使用 HTTP 发送视频');
+      }
+
+      // WebSocket 失败或未连接，使用 HTTP 发送
+      final response = await _apiService.sendMessage(
+        receiverId: widget.friend.id,
+        content: videoUrl, // 视频消息的content是视频URL
+        messageType: 'VIDEO',
+      );
+
+      EasyLoading.dismiss();
+
+      if (!response.success) {
+        if (mounted) {
+          EasyLoading.showError(response.message.isEmpty ? '发送失败' : response.message);
+        }
+      } else {
+        debugPrint('✅ HTTP 发送视频成功: ${response.data?.id}');
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      if (mounted) {
+        EasyLoading.showError('发送失败: $e');
+      }
+      debugPrint('❌ 发送视频失败: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -748,7 +842,9 @@ class _ChatPageState extends State<ChatPage> {
                   // 根据消息类型显示不同内容
                   message.messageType == 'IMAGE' && message.imageUrl != null
                       ? _buildImageMessage(message)
-                      : _buildTextMessage(message),
+                      : message.messageType == 'VIDEO' && message.videoUrl != null
+                          ? _buildVideoMessage(message)
+                          : _buildTextMessage(message),
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(message.timestamp),
@@ -915,6 +1011,74 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
         ),
+      ),
+    );
+  }
+
+  /// 视频消息
+  Widget _buildVideoMessage(ChatMessage message) {
+    return GestureDetector(
+      onTap: () {
+        // 点击视频播放
+        _showVideoPlayer(message.videoUrl!);
+      },
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 200,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 200,
+                height: 200,
+                color: Colors.black87,
+                child: const Center(
+                  child: Icon(
+                    Icons.play_circle_outline,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            // 播放按钮
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                size: 50,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示视频播放器
+  void _showVideoPlayer(String videoUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => VideoPlayerPage(videoUrl: videoUrl),
       ),
     );
   }
@@ -1248,6 +1412,14 @@ class _ChatPageState extends State<ChatPage> {
                     },
                   ),
                   _buildMoreOptionItem(
+                    icon: Icons.video_library,
+                    label: '视频',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickAndSendVideo(ImageSource.gallery);
+                    },
+                  ),
+                  _buildMoreOptionItem(
                     icon: Icons.gif_box,
                     label: 'GIF',
                     onTap: () {
@@ -1484,8 +1656,9 @@ class ChatMessage {
   final String content;
   final bool isSentByMe;
   final DateTime timestamp;
-  final String messageType; // TEXT 或 IMAGE
+  final String messageType; // TEXT, IMAGE, VIDEO
   final String? imageUrl; // 图片消息的URL
+  final String? videoUrl; // 视频消息的URL
 
   ChatMessage({
     required this.id,
@@ -1494,6 +1667,138 @@ class ChatMessage {
     required this.timestamp,
     this.messageType = 'TEXT',
     this.imageUrl,
+    this.videoUrl,
   });
+}
+
+/// 视频播放器页面
+class VideoPlayerPage extends StatefulWidget {
+  final String videoUrl;
+
+  const VideoPlayerPage({
+    super.key,
+    required this.videoUrl,
+  });
+
+  @override
+  State<VideoPlayerPage> createState() => _VideoPlayerPageState();
+}
+
+class _VideoPlayerPageState extends State<VideoPlayerPage> {
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
+  bool _isInitialized = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      _videoPlayerController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+      );
+
+      await _videoPlayerController.initialize();
+
+      if (mounted) {
+        setState(() {
+          _chewieController = ChewieController(
+            videoPlayerController: _videoPlayerController,
+            autoPlay: true,
+            looping: false,
+            aspectRatio: _videoPlayerController.value.aspectRatio,
+            errorBuilder: (context, errorMessage) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '视频播放失败',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ 视频初始化失败: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoPlayerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          '视频播放',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Center(
+        child: _hasError
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '视频加载失败',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.videoUrl,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              )
+            : _isInitialized && _chewieController != null
+                ? Chewie(controller: _chewieController!)
+                : const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+      ),
+    );
+  }
 }
 
