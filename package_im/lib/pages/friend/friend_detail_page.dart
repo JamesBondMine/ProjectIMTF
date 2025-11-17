@@ -84,7 +84,8 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text('好友详情'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),

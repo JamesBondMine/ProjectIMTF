@@ -124,7 +124,8 @@ class _FriendListPageState extends State<FriendListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('好友'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add),

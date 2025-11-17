@@ -203,7 +203,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('投诉建议'),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
         ),
         body: Form(
           key: _formKey,

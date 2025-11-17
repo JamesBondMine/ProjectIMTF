@@ -108,7 +108,8 @@ class _AddFriendPageState extends State<AddFriendPage> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('添加好友'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
