@@ -43,14 +43,24 @@ class _ChatPageState extends State<ChatPage> {
 
   // GIF表情列表
   static const List<String> _gifList = [
+    'assets/gif/car-1803_256.gif',
     'assets/gif/cupid-18601_256.gif',
+    'assets/gif/download-2486_256.gif',
+    'assets/gif/flower-11997_256.gif',
     'assets/gif/flowers-11015_256.gif',
     'assets/gif/halloween-22525_256.gif',
     'assets/gif/hammer-8415_256.gif',
     'assets/gif/horse-22647_256.gif',
     'assets/gif/hot-12616_256.gif',
+    'assets/gif/hot-air-balloon-3622_256.gif',
+    'assets/gif/iceland-5543_256.gif',
+    'assets/gif/ladybug-5068_256.gif',
     'assets/gif/love-3955_256.gif',
     'assets/gif/paper-23984_256.gif',
+    'assets/gif/pinwheel-8829_256.gif',
+    'assets/gif/pride-6390_256.gif',
+    'assets/gif/rocket-3972_256.gif',
+    'assets/gif/swing-6077_256.gif',
     'assets/gif/tree-10000_256.gif',
     'assets/gif/unicorn-16249_256.gif',
     'assets/gif/wind-21844_256.gif',
@@ -130,9 +140,7 @@ class _ChatPageState extends State<ChatPage> {
           isSentByMe: isToFriend,  // 我发的消息
           timestamp: DateTime.parse(message.createdAt),
           messageType: message.messageType,
-          imageUrl: (message.messageType == 'IMAGE' || message.messageType == 'GIF') 
-              ? message.content 
-              : null,
+          imageUrl: message.messageType == 'IMAGE' ? message.content : null,
         );
         
         if (mounted) {
@@ -197,9 +205,7 @@ class _ChatPageState extends State<ChatPage> {
             isSentByMe: message.senderId == currentUserId,
             timestamp: DateTime.parse(message.createdAt),
             messageType: message.messageType,
-            imageUrl: (message.messageType == 'IMAGE' || message.messageType == 'GIF') 
-                ? message.content 
-                : null,
+            imageUrl: message.messageType == 'IMAGE' ? message.content : null,
           );
         }).toList();
 
@@ -739,13 +745,10 @@ class _ChatPageState extends State<ChatPage> {
                     ? CrossAxisAlignment.end
                     : CrossAxisAlignment.start,
                 children: [
-                  Text(message.messageType),
                   // 根据消息类型显示不同内容
                   message.messageType == 'IMAGE' && message.imageUrl != null
                       ? _buildImageMessage(message)
-                      : message.messageType == 'GIF' && message.imageUrl != null
-                          ? _buildGifMessage(message)
-                          : _buildTextMessage(message),
+                      : _buildTextMessage(message),
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(message.timestamp),
@@ -851,69 +854,14 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /// 图片消息
+  /// 图片消息（包括普通图片和GIF）
   Widget _buildImageMessage(ChatMessage message) {
-    return GestureDetector(
-      onTap: () {
-        // 点击图片查看大图
-        _showImagePreview(message.imageUrl!);
-      },
-      child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 200,
-          maxHeight: 200,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-            imageUrl: message.imageUrl!,
-            width: 200,
-            height: 200,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              width: 200,
-              height: 200,
-              color: Colors.grey[200],
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            errorWidget: (context, url, error) => Container(
-              width: 200,
-              height: 200,
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(
-                  Icons.broken_image,
-                  size: 50,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// GIF消息
-  Widget _buildGifMessage(ChatMessage message) {
     // 判断是本地 assets 路径还是网络 URL
     final isLocalAsset = message.imageUrl!.startsWith('assets/');
     
     return GestureDetector(
       onTap: () {
-        // 点击GIF查看大图
+        // 点击图片查看大图
         _showImagePreview(message.imageUrl!);
       },
       child: Container(
@@ -941,7 +889,7 @@ class _ChatPageState extends State<ChatPage> {
                   fit: BoxFit.cover,
                 )
               : CachedNetworkImage(
-                  imageUrl:  message.imageUrl!,
+                  imageUrl: message.imageUrl!,
                   width: 200,
                   height: 200,
                   fit: BoxFit.cover,
@@ -1360,17 +1308,29 @@ class _ChatPageState extends State<ChatPage> {
       context: context,
       builder: (context) {
         return Container(
-          height: 300,
+          height: 450,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '选择GIF表情',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '选择GIF表情',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '共${_gifList.length}个',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -1440,7 +1400,7 @@ class _ChatPageState extends State<ChatPage> {
         content: gifUrl,
         isSentByMe: true,
         timestamp: DateTime.now(),
-        messageType: 'GIF',
+        messageType: 'IMAGE',
         imageUrl: gifUrl,
       );
 
@@ -1455,15 +1415,15 @@ class _ChatPageState extends State<ChatPage> {
 
       // 4. 优先尝试通过 WebSocket 发送
       if (_apiService.isChatWebSocketConnected) {
-        debugPrint('📤 尝试通过 WebSocket 发送GIF: messageType=GIF, content=$gifUrl');
+        debugPrint('📤 尝试通过 WebSocket 发送GIF: messageType=IMAGE, content=$gifUrl');
         success = await _apiService.sendMessageViaWebSocket(
           receiverId: widget.friend.id,
           content: gifUrl,
-          messageType: 'GIF',
+          messageType: 'IMAGE',
         );
         
         if (success) {
-          debugPrint('✅ WebSocket 发送GIF成功: messageType=GIF');
+          debugPrint('✅ WebSocket 发送GIF成功: messageType=IMAGE');
           EasyLoading.dismiss();
           return;
         } else {
@@ -1474,11 +1434,11 @@ class _ChatPageState extends State<ChatPage> {
       }
 
       // 5. WebSocket 失败或未连接，使用 HTTP 发送
-      debugPrint('📤 通过 HTTP 发送GIF: messageType=GIF, content=$gifUrl');
+      debugPrint('📤 通过 HTTP 发送GIF: messageType=IMAGE, content=$gifUrl');
       final response = await _apiService.sendMessage(
         receiverId: widget.friend.id,
         content: gifUrl,
-        messageType: 'GIF',
+        messageType: 'IMAGE',
       );
 
       EasyLoading.dismiss();
