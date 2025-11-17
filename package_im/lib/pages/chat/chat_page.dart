@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
@@ -39,7 +40,9 @@ class _ChatPageState extends State<ChatPage> {
   final _apiService = ApiService();
   final _remarkService = RemarkService();
   final _imagePicker = ImagePicker();
+  final FlutterTts _flutterTts = FlutterTts();
   bool _isLoading = false;
+  bool _isSpeaking = false; // 是否正在朗读
   String? _friendRemark; // 好友备注
 
   // GIF表情列表
@@ -75,6 +78,9 @@ class _ChatPageState extends State<ChatPage> {
     // 注册消息监听器（WebSocket 已在 HomePage 建立连接）
     _apiService.addMessageListener(_onWebSocketMessage);
     
+    // 初始化 TTS
+    _initTts();
+    
     // 加载好友备注
     _loadFriendRemark();
     
@@ -87,6 +93,58 @@ class _ChatPageState extends State<ChatPage> {
       _markMessagesAsRead();
     } else {
       _loadMockMessages();
+    }
+  }
+
+  /// 初始化 TTS
+  Future<void> _initTts() async {
+    try {
+      // 设置语言为简体中文
+      await _flutterTts.setLanguage("zh-CN");
+      
+      // 设置语速（0.0 - 1.0，默认 0.5）
+      await _flutterTts.setSpeechRate(0.5);
+      
+      // 设置音量（0.0 - 1.0，默认 1.0）
+      await _flutterTts.setVolume(1.0);
+      
+      // 设置音调（0.5 - 2.0，默认 1.0）
+      await _flutterTts.setPitch(1.0);
+
+      // 监听朗读完成事件
+      _flutterTts.setCompletionHandler(() {
+        if (mounted) {
+          setState(() {
+            _isSpeaking = false;
+          });
+        }
+        debugPrint('🔊 朗读完成');
+      });
+
+      // 监听朗读开始事件
+      _flutterTts.setStartHandler(() {
+        if (mounted) {
+          setState(() {
+            _isSpeaking = true;
+          });
+        }
+        debugPrint('🔊 开始朗读');
+      });
+
+      // 监听朗读错误事件
+      _flutterTts.setErrorHandler((msg) {
+        if (mounted) {
+          setState(() {
+            _isSpeaking = false;
+          });
+        }
+        debugPrint('❌ 朗读错误: $msg');
+        EasyLoading.showError('朗读失败');
+      });
+
+      debugPrint('✅ TTS 初始化成功');
+    } catch (e) {
+      debugPrint('❌ TTS 初始化失败: $e');
     }
   }
 
@@ -104,6 +162,9 @@ class _ChatPageState extends State<ChatPage> {
   void dispose() {
     // 移除消息监听器（但不断开 WebSocket 连接，保持全局连接）
     _apiService.removeMessageListener(_onWebSocketMessage);
+    
+    // 停止 TTS
+    _flutterTts.stop();
     
     debugPrint('📱 [ChatPage] 已移除消息监听器');
     
@@ -1272,6 +1333,42 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 朗读文本
+  Future<void> _speakText(String text) async {
+    try {
+      if (_isSpeaking) {
+        // 如果正在朗读，先停止
+        await _flutterTts.stop();
+        setState(() {
+          _isSpeaking = false;
+        });
+        return;
+      }
+
+      await _flutterTts.speak(text);
+      debugPrint('🔊 开始朗读: $text');
+    } catch (e) {
+      debugPrint('❌ 朗读失败: $e');
+      EasyLoading.showError('朗读失败');
+      setState(() {
+        _isSpeaking = false;
+      });
+    }
+  }
+
+  /// 停止朗读
+  Future<void> _stopSpeaking() async {
+    try {
+      await _flutterTts.stop();
+      setState(() {
+        _isSpeaking = false;
+      });
+      debugPrint('🔊 停止朗读');
+    } catch (e) {
+      debugPrint('❌ 停止朗读失败: $e');
+    }
+  }
+
   /// 显示消息操作选项
   void _showMessageOptions(ChatMessage message) {
     showModalBottomSheet(
@@ -1280,6 +1377,23 @@ class _ChatPageState extends State<ChatPage> {
         return SafeArea(
           child: Wrap(
             children: [
+              // 朗读文本消息
+              if (message.messageType == 'TEXT')
+                ListTile(
+                  leading: Icon(
+                    _isSpeaking ? Icons.stop_circle : Icons.volume_up,
+                    color: _isSpeaking ? Colors.red : null,
+                  ),
+                  title: Text(_isSpeaking ? '停止朗读' : '朗读'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (_isSpeaking) {
+                      _stopSpeaking();
+                    } else {
+                      _speakText(message.content);
+                    }
+                  },
+                ),
               // 复制文本消息
               if (message.messageType == 'TEXT')
                 ListTile(

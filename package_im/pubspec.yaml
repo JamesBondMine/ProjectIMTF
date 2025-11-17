@@ -64,6 +64,8 @@ dependencies:
   chewie: ^1.8.5
   # 音频播放器
   audioplayers: ^6.1.0
+  # 文本朗读（TTS）
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:
