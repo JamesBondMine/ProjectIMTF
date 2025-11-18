@@ -18,14 +18,14 @@ void _configLoading() {
   EasyLoading.instance
     ..displayDuration = const Duration(milliseconds: 2000)
     ..indicatorType = EasyLoadingIndicatorType.fadingCircle
-    ..loadingStyle = EasyLoadingStyle.dark
+    ..loadingStyle = EasyLoadingStyle.custom
     ..indicatorSize = 45.0
     ..radius = 10.0
-    ..progressColor = Colors.yellow
-    ..backgroundColor = Colors.green
-    ..indicatorColor = Colors.yellow
-    ..textColor = Colors.yellow
-    ..maskColor = Colors.blue.withOpacity(0.5)
+    ..progressColor = const Color(0xFF07C160)
+    ..backgroundColor = Colors.white
+    ..indicatorColor = const Color(0xFF07C160)
+    ..textColor = Colors.black
+    ..maskColor = Colors.black.withOpacity(0.5)
     ..userInteractions = false
     ..dismissOnTap = false;
 }
@@ -39,7 +39,15 @@ class MyApp extends StatelessWidget {
       title: 'Vendo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF07C160),
+          primary: const Color(0xFF07C160),
+        ),
+        primaryColor: const Color(0xFF07C160),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF07C160),
+          foregroundColor: Colors.white,
+        ),
         useMaterial3: true,
       ),
       home: const SplashPage(),
