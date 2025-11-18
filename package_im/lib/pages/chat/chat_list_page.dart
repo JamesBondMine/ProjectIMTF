@@ -20,16 +20,38 @@ class ChatListPage extends StatefulWidget {
   State<ChatListPage> createState() => _ChatListPageState();
 }
 
-class _ChatListPageState extends State<ChatListPage> {
+class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderStateMixin {
   List<ChatConversation> _conversationList = [];
   bool _isLoading = false;
   final _apiService = ApiService();
   final _remarkService = RemarkService();
   Timer? _refreshTimer;  // 定时刷新定时器
+  
+  // 侧边面板相关
+  late AnimationController _drawerController;
+  late Animation<Offset> _drawerAnimation;
+  bool _isDrawerOpen = true;  // 默认打开
 
   @override
   void initState() {
     super.initState();
+    
+    // 初始化侧边面板动画控制器
+    _drawerController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _drawerAnimation = Tween<Offset>(
+      begin: const Offset(-1.0, 0.0),  // 从左侧隐藏
+      end: Offset.zero,  // 显示在屏幕上
+    ).animate(CurvedAnimation(
+      parent: _drawerController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // 默认展开侧边面板
+    _drawerController.forward();
     
     // 注册消息监听器
     _apiService.addMessageListener(_onWebSocketMessage);
@@ -46,10 +68,25 @@ class _ChatListPageState extends State<ChatListPage> {
     // 取消定时器
     _refreshTimer?.cancel();
     
+    // 释放动画控制器
+    _drawerController.dispose();
+    
     // 移除消息监听器
     _apiService.removeMessageListener(_onWebSocketMessage);
     
     super.dispose();
+  }
+  
+  /// 切换侧边面板
+  void _toggleDrawer() {
+    setState(() {
+      if (_isDrawerOpen) {
+        _drawerController.reverse();
+      } else {
+        _drawerController.forward();
+      }
+      _isDrawerOpen = !_isDrawerOpen;
+    });
   }
 
   /// 启动自动刷新定时器
@@ -213,7 +250,7 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget build(BuildContext context) {
     // 设置状态栏为透明，图标为深色
     SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
+      const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
@@ -221,20 +258,44 @@ class _ChatListPageState extends State<ChatListPage> {
     );
 
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          // 顶部用户头像区域（包含状态栏）
-          _buildHeader(context),
-          // 聊天列表（包含下拉刷新）
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadConversationList,
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _conversationList.isEmpty
-                      ? _buildEmptyState()
-                      : _buildConversationList(),
+          // 主内容区域
+          Column(
+            children: [
+              // 顶部用户头像区域（包含状态栏）
+              _buildHeader(context),
+              // 聊天列表（包含下拉刷新）
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _loadConversationList,
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _conversationList.isEmpty
+                          ? _buildEmptyState()
+                          : _buildConversationList(),
+                ),
+              ),
+            ],
+          ),
+          
+          // 遮罩层（当侧边面板打开时显示）
+          if (_isDrawerOpen)
+            GestureDetector(
+              onTap: _toggleDrawer,
+              child: AnimatedOpacity(
+                opacity: _isDrawerOpen ? 0.5 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Container(
+                  color: Colors.black,
+                ),
+              ),
             ),
+          
+          // 左侧滑出的个人中心面板
+          SlideTransition(
+            position: _drawerAnimation,
+            child: _buildProfileDrawer(),
           ),
         ],
       ),
@@ -267,13 +328,7 @@ class _ChatListPageState extends State<ChatListPage> {
         children: [
           // 用户头像（可点击）- 加大尺寸
           GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
-              );
-            },
+            onTap: _toggleDrawer,
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -891,6 +946,27 @@ class _ChatListPageState extends State<ChatListPage> {
       // 更早，显示日期
       return '${time.month}/${time.day}';
     }
+  }
+
+  /// 构建左侧滑出的个人中心面板
+  Widget _buildProfileDrawer() {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.75,  // 宽度为屏幕的75%
+      height: MediaQuery.of(context).size.height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(2, 0),
+          ),
+        ],
+      ),
+      child: ProfilePage(
+        onClose: _toggleDrawer,  // 传递关闭回调
+      ),
+    );
   }
 }
 

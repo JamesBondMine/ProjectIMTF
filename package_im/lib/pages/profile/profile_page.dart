@@ -11,7 +11,9 @@ import 'emoji_manager_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final VoidCallback? onClose;  // 可选的关闭回调
+  
+  const ProfilePage({super.key, this.onClose});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -24,15 +26,24 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = _apiService.currentUser;
+    
+    // 判断是否作为侧边面板使用
+    final isDrawerMode = widget.onClose != null;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: isDrawerMode ? null : AppBar(
         title: const Text('个人信息'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+      body: Column(
+        children: [
+          // 如果是侧边面板模式，添加顶部栏
+          if (isDrawerMode) _buildDrawerHeader(),
+          // 可滚动内容
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
             // 顶部用户信息卡片
             Container(
               width: double.infinity,
@@ -144,8 +155,51 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建侧边面板顶部栏
+  Widget _buildDrawerHeader() {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        bottom: 16,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.8),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            '个人信息',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          IconButton(
+            onPressed: widget.onClose,
+            icon: const Icon(Icons.close, color: Colors.white),
+            tooltip: '关闭',
+          ),
+        ],
       ),
     );
   }
