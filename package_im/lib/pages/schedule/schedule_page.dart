@@ -109,7 +109,7 @@ class _SchedulePageState extends State<SchedulePage> {
     final descController = TextEditingController(text: schedule?.description ?? '');
     DateTime selectedDate = schedule?.date ?? _selectedDate;
     TimeOfDay selectedTime = TimeOfDay.fromDateTime(schedule?.date ?? _selectedDate);
-    String selectedColor = schedule?.color ?? '0xFF07C160';
+    String selectedColor = schedule?.color ?? '0xFF7B1FA2';
 
     showDialog(
       context: context,
@@ -213,11 +213,11 @@ class _SchedulePageState extends State<SchedulePage> {
                     Wrap(
                       spacing: 12,
                       children: [
-                        '0xFF07C160', // 绿色
+                        '0xFF7B1FA2', // 紫色（主题色）
                         '0xFF1989FA', // 蓝色
                         '0xFFFF6B6B', // 红色
                         '0xFFFFBE0B', // 黄色
-                        '0xFF9C27B0', // 紫色
+                        '0xFF4CAF50', // 绿色
                         '0xFFFF6D00', // 橙色
                       ].map((color) {
                         final isSelected = selectedColor == color;
