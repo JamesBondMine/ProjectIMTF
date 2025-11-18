@@ -294,6 +294,105 @@ class ApiService {
     }
   }
 
+  /// 获取动态列表
+  /// 
+  /// [page] 页码（从0开始）
+  /// [size] 每页数据量
+  Future<ApiResponse<dynamic>> getMoments({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      debugPrint('获取动态列表: page=$page, size=$size');
+
+      final response = await _httpManager.get(
+        '/api/moments',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+        showLoading: false,
+      );
+
+      debugPrint('动态列表响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('获取动态列表失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 点赞动态
+  /// 
+  /// [momentId] 动态ID
+  Future<ApiResponse<dynamic>> likeMoment(int momentId) async {
+    try {
+      debugPrint('点赞动态: momentId=$momentId');
+
+      final response = await _httpManager.post(
+        '/api/moments/$momentId/like',
+        showLoading: false,
+      );
+
+      debugPrint('点赞响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('点赞失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 取消点赞动态
+  /// 
+  /// [momentId] 动态ID
+  Future<ApiResponse<dynamic>> unlikeMoment(int momentId) async {
+    try {
+      debugPrint('取消点赞动态: momentId=$momentId');
+
+      final response = await _httpManager.delete(
+        '/api/moments/$momentId/like',
+        showLoading: false,
+      );
+
+      debugPrint('取消点赞响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('取消点赞失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 发布动态
+  /// 
+  /// [content] 动态内容
+  /// [mediaType] 媒体类型（IMAGE, VIDEO, TEXT等）
+  /// [mediaUrls] 媒体文件URL列表
+  Future<ApiResponse<dynamic>> publishMoment({
+    required String content,
+    required String mediaType,
+    List<String>? mediaUrls,
+  }) async {
+    try {
+      debugPrint('发布动态: content=$content, mediaType=$mediaType');
+
+      final response = await _httpManager.post(
+        '/api/moments',
+        data: {
+          'content': content,
+          'mediaType': mediaType,
+          'mediaUrls': mediaUrls ?? [],
+        },
+        showLoading: true,
+      );
+
+      debugPrint('发布动态响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('发布动态失败: $e');
+      rethrow;
+    }
+  }
+
   /// 忘记密码
   Future<ApiResponse<dynamic>> forgotPassword({
     required String email,

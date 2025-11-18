@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import '../../models/moment.dart';
+import '../../services/api_service.dart';
+import 'publish_moment_page.dart';
 
 /// 发现页面
 class DiscoverPage extends StatefulWidget {
@@ -11,6 +15,7 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final GlobalKey<_RecommendTabState> _recommendTabKey = GlobalKey<_RecommendTabState>();
 
   @override
   void initState() {
@@ -75,9 +80,9 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
         },
         body: TabBarView(
           controller: _tabController,
-          children: const [
-            _RecommendTab(),
-            _FollowTab(),
+          children: [
+            _RecommendTab(key: _recommendTabKey),
+            const _FollowTab(),
           ],
         ),
       ),
@@ -120,9 +125,19 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
                   icon: Icons.image_outlined,
                   title: '发布图文',
                   color: Colors.blue,
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    // TODO: 跳转到发布图文页面
+                    // 跳转到发布图文页面
+                    final result = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (context) => const PublishMomentPage(),
+                      ),
+                    );
+                    
+                    // 如果发布成功，刷新推荐列表
+                    if (result == true && mounted) {
+                      _recommendTabKey.currentState?._loadMoments(isRefresh: true);
+                    }
                   },
                 ),
                 _buildPublishOption(
@@ -191,92 +206,210 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
 
 /// 推荐页签
 class _RecommendTab extends StatefulWidget {
-  const _RecommendTab();
+  const _RecommendTab({super.key});
 
   @override
   State<_RecommendTab> createState() => _RecommendTabState();
 }
 
 class _RecommendTabState extends State<_RecommendTab> {
-  // 模拟动态数据
-  final List<Map<String, dynamic>> _posts = [
-    {
-      'id': 1,
-      'user': {
-        'name': '旅行达人小李',
-        'avatar': 'https://picsum.photos/200/200?random=1',
-      },
-      'content': '今天去了一个超美的地方，风景如画！分享给大家～',
-      'images': [
-        'https://picsum.photos/400/300?random=11',
-        'https://picsum.photos/400/300?random=12',
-        'https://picsum.photos/400/300?random=13',
-      ],
-      'likes': 128,
-      'comments': 23,
-      'isLiked': false,
-      'isFollowed': false,
-      'time': '2小时前',
-    },
-    {
-      'id': 2,
-      'user': {
-        'name': '美食探索者',
-        'avatar': 'https://picsum.photos/200/200?random=2',
-      },
-      'content': '今日份的下午茶☕️ 这家店的蛋糕真的太好吃了！',
-      'images': [
-        'https://picsum.photos/400/300?random=21',
-      ],
-      'likes': 256,
-      'comments': 45,
-      'isLiked': true,
-      'isFollowed': true,
-      'time': '5小时前',
-    },
-    {
-      'id': 3,
-      'user': {
-        'name': '科技数码君',
-        'avatar': 'https://picsum.photos/200/200?random=3',
-      },
-      'content': '新入手的这款产品体验真不错，给大家测评一下～',
-      'images': [
-        'https://picsum.photos/400/300?random=31',
-        'https://picsum.photos/400/300?random=32',
-      ],
-      'likes': 89,
-      'comments': 12,
-      'isLiked': false,
-      'isFollowed': false,
-      'time': '8小时前',
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  
+  List<Moment> _moments = [];
+  int _currentPage = 0;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMoments();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 滚动监听，触发加载更多
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasMore) {
+        _loadMore();
+      }
+    }
+  }
+
+  /// 加载动态列表
+  Future<void> _loadMoments({bool isRefresh = false}) async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+      if (isRefresh) {
+        _currentPage = 0;
+        _hasMore = true;
+      }
+    });
+
+    try {
+      final response = await _apiService.getMoments(
+        page: _currentPage,
+        size: 10,
+      );
+
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final momentListResponse = MomentListResponse.fromJson(response.data);
+          
+          setState(() {
+            if (isRefresh) {
+              _moments = momentListResponse.moments;
+            } else {
+              _moments.addAll(momentListResponse.moments);
+            }
+            _hasMore = momentListResponse.hasNext;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          if (!isRefresh) {
+            EasyLoading.showError(response.message.isNotEmpty 
+                ? response.message 
+                : '加载失败');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (!isRefresh) {
+          EasyLoading.showError('加载失败: $e');
+        }
+      }
+    }
+  }
+
+  /// 加载更多
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+      _currentPage++;
+    });
+
+    try {
+      final response = await _apiService.getMoments(
+        page: _currentPage,
+        size: 10,
+      );
+
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final momentListResponse = MomentListResponse.fromJson(response.data);
+          
+          setState(() {
+            _moments.addAll(momentListResponse.moments);
+            _hasMore = momentListResponse.hasNext;
+            _isLoadingMore = false;
+          });
+        } else {
+          setState(() {
+            _currentPage--; // 回退页码
+            _isLoadingMore = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentPage--; // 回退页码
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  /// 下拉刷新
+  Future<void> _onRefresh() async {
+    await _loadMoments(isRefresh: true);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && _moments.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_moments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 80,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '暂无动态',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: _onRefresh,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _posts.length,
+        itemCount: _moments.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          return _buildPostCard(_posts[index]);
+          if (index == _moments.length) {
+            // 加载更多指示器
+            return Container(
+              padding: const EdgeInsets.all(16),
+              alignment: Alignment.center,
+              child: _isLoadingMore
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      '加载更多...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+            );
+          }
+          return _buildPostCard(_moments[index]);
         },
       ),
     );
   }
 
-  Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() {
-        // 刷新数据
-      });
-    }
-  }
-
-  Widget _buildPostCard(Map<String, dynamic> post) {
+  Widget _buildPostCard(Moment moment) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
@@ -295,7 +428,15 @@ class _RecommendTabState extends State<_RecommendTab> {
               // 头像
               CircleAvatar(
                 radius: 22,
-                backgroundImage: CachedNetworkImageProvider(post['user']['avatar']),
+                backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
+                    ? CachedNetworkImageProvider(moment.avatarUrl!)
+                    : null,
+                child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
+                    ? Text(
+                        moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
+                        style: const TextStyle(fontSize: 18),
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               // 用户名和时间
@@ -304,7 +445,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post['user']['name'],
+                      moment.nickname,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -312,7 +453,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      post['time'],
+                      moment.getRelativeTime(),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -321,63 +462,59 @@ class _RecommendTabState extends State<_RecommendTab> {
                   ],
                 ),
               ),
-              // 关注按钮
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    post['isFollowed'] = !post['isFollowed'];
-                  });
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: post['isFollowed']
-                      ? Colors.grey[200]
-                      : Theme.of(context).primaryColor,
-                  foregroundColor: post['isFollowed'] ? Colors.grey[700] : Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              // 关注按钮（仅非好友显示）
+              if (!moment.isFriend)
+                TextButton(
+                  onPressed: () {
+                    // TODO: 关注功能
+                    EasyLoading.showToast('关注功能开发中');
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    '关注',
+                    style: TextStyle(fontSize: 13),
+                  ),
                 ),
-                child: Text(
-                  post['isFollowed'] ? '已关注' : '关注',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
           // 内容
           Text(
-            post['content'],
+            moment.content,
             style: const TextStyle(
               fontSize: 15,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
-          // 图片
-          _buildImageGrid(post['images']),
+          if (moment.mediaUrls.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            // 图片
+            _buildImageGrid(moment.mediaUrls),
+          ],
           const SizedBox(height: 12),
           // 互动按钮
           Row(
             children: [
               _buildActionButton(
-                icon: post['isLiked'] ? Icons.favorite : Icons.favorite_border,
-                label: '${post['likes']}',
-                color: post['isLiked'] ? Colors.red : Colors.grey[600],
-                onTap: () {
-                  setState(() {
-                    post['isLiked'] = !post['isLiked'];
-                    post['likes'] += post['isLiked'] ? 1 : -1;
-                  });
-                },
+                icon: moment.liked ? Icons.favorite : Icons.favorite_border,
+                label: '${moment.likeCount}',
+                color: moment.liked ? Colors.red : Colors.grey[600],
+                onTap: () => _handleLike(moment),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
                 icon: Icons.chat_bubble_outline,
-                label: '${post['comments']}',
+                label: '${moment.commentCount}',
                 color: Colors.grey[600],
                 onTap: () {
                   // TODO: 查看评论
+                  EasyLoading.showToast('评论功能开发中');
                 },
               ),
               const SizedBox(width: 24),
@@ -387,6 +524,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                 color: Colors.grey[600],
                 onTap: () {
                   // TODO: 分享
+                  EasyLoading.showToast('分享功能开发中');
                 },
               ),
               const Spacer(),
@@ -394,6 +532,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                 icon: const Icon(Icons.more_horiz),
                 onPressed: () {
                   // TODO: 更多选项
+                  EasyLoading.showToast('更多选项开发中');
                 },
                 color: Colors.grey[600],
                 padding: EdgeInsets.zero,
@@ -404,6 +543,37 @@ class _RecommendTabState extends State<_RecommendTab> {
         ],
       ),
     );
+  }
+
+  /// 处理点赞/取消点赞
+  Future<void> _handleLike(Moment moment) async {
+    // 乐观更新UI
+    final index = _moments.indexWhere((m) => m.id == moment.id);
+    if (index == -1) return;
+
+    final updatedMoment = moment.copyWith(
+      liked: !moment.liked,
+      likeCount: moment.liked ? moment.likeCount - 1 : moment.likeCount + 1,
+    );
+
+    setState(() {
+      _moments[index] = updatedMoment;
+    });
+
+    try {
+      // 调用API
+      if (updatedMoment.liked) {
+        await _apiService.likeMoment(moment.id);
+      } else {
+        await _apiService.unlikeMoment(moment.id);
+      }
+    } catch (e) {
+      // 失败时回滚
+      setState(() {
+        _moments[index] = moment;
+      });
+      EasyLoading.showError('操作失败');
+    }
   }
 
   Widget _buildImageGrid(List<String> images) {
