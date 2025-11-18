@@ -194,6 +194,61 @@ class ApiService {
     }
   }
 
+  /// Apple 登录
+  /// 
+  /// [identityToken] Apple 返回的 identityToken
+  /// [appleUserId] Apple 用户 ID
+  /// [email] Apple 用户邮箱（可选）
+  /// [nickname] Apple 用户昵称（可选）
+  Future<ApiResponse<LoginResponseData>> appleLogin({
+    required String identityToken,
+    required String appleUserId,
+    String? email,
+    String? nickname,
+  }) async {
+    try {
+      debugPrint('开始 Apple 登录');
+      debugPrint('appleUserId: $appleUserId');
+      debugPrint('email: $email');
+      debugPrint('nickname: $nickname');
+
+      final response = await _httpManager.post<LoginResponseData>(
+        '/api/auth/apple-login',
+        data: {
+          'identityToken': identityToken,
+          'appleUserId': appleUserId,
+          'email': email ?? '',
+          'nickname': nickname ?? '',
+        },
+        showLoading: true,
+        fromJson: (json) => LoginResponseData.fromJson(json),
+      );
+
+      debugPrint('Apple 登录响应: $response');
+
+      if (response.success && response.data != null) {
+        // 保存Token和用户信息到内存
+        _token = response.data!.token;
+        _currentUser = response.data!.user;
+        _httpManager.setToken(_token!);
+
+        // 保存到本地存储
+        await _storageManager.saveToken(_token!);
+        await _storageManager.saveUserInfo(_currentUser!.toJson());
+        await _storageManager.setLoggedIn(true);
+
+        debugPrint('Apple 登录成功: ${_currentUser?.nickname}');
+        debugPrint('Token: $_token');
+        debugPrint('数据已保存到本地存储');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('Apple 登录失败: $e');
+      rethrow;
+    }
+  }
+
   /// 退出登录
   Future<void> logout() async {
     try {

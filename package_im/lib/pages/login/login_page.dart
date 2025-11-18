@@ -150,40 +150,50 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         // 获取到 Apple 返回的凭证
         final identityToken = credential.identityToken;
-        // final authorizationCode = credential.authorizationCode;
-        // final userIdentifier = credential.userIdentifier;
+        final appleUserId = credential.userIdentifier;
+        
+        // 获取用户信息（如果有的话）
+        final fullName = credential.givenName != null && credential.familyName != null
+            ? '${credential.familyName}${credential.givenName}'
+            : null;
+        final email = credential.email;
 
-        if (identityToken != null) {
-          // TODO: 调用后端 API 进行 Apple 登录验证
-          // 这里需要后端提供 Apple 登录的接口
-          // final response = await _apiService.appleLogin(
-          //   identityToken: identityToken,
-          //   authorizationCode: credential.authorizationCode,
-          //   userIdentifier: credential.userIdentifier,
-          // );
+        if (identityToken != null && appleUserId != null) {
+          // 调用后端 API 进行 Apple 登录验证
+          final response = await _apiService.appleLogin(
+            identityToken: identityToken,
+            appleUserId: appleUserId,
+            email: email,
+            nickname: fullName,
+          );
 
-          // 暂时模拟登录成功
-          await Future.delayed(const Duration(milliseconds: 500));
-          
           if (mounted) {
             setState(() {
               _isLoading = false;
             });
 
-            EasyLoading.showSuccess('Apple 登录成功！');
-            await Future.delayed(const Duration(milliseconds: 500));
+            if (response.success && response.data != null) {
+              // Apple 登录成功
+              EasyLoading.showSuccess('Apple 登录成功！');
+              await Future.delayed(const Duration(milliseconds: 500));
 
-            if (mounted) {
-              // 跳转到主页
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => HomePage(
-                    username: credential.givenName ?? 
-                             credential.familyName ?? 
-                             'Apple用户',
+              if (mounted) {
+                // 跳转到主页
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => HomePage(
+                      username: response.data?.user.nickname ?? 
+                               fullName ?? 
+                               'Apple用户',
+                    ),
                   ),
-                ),
-              );
+                );
+              }
+            } else {
+              // 登录失败
+              EasyLoading.showError(response.message.isNotEmpty 
+                  ? response.message 
+                  : 'Apple 登录失败');
             }
           }
         } else {
