@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'discover/discover_page.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
 import 'profile/profile_page.dart';
@@ -20,8 +21,9 @@ class _HomePageState extends State<HomePage> {
 
   // 页面列表
   final List<Widget> _pages = const [
-    ChatListPage(),
+    DiscoverPage(),
     FriendListPage(),
+    ChatListPage(),
     ProfilePage(),
   ];
 
@@ -75,14 +77,19 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: '聊天',
+            icon: Icon(Icons.explore_outlined),
+            activeIcon: Icon(Icons.explore),
+            label: '发现',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
             label: '好友',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: '聊天',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
