@@ -264,12 +264,12 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    // 设置状态栏为透明，图标为深色
+    // 设置状态栏为透明，图标为深色以配合白色背景
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,  // 深色图标
+        statusBarBrightness: Brightness.light,  // iOS 使用
       ),
     );
 
@@ -318,581 +318,552 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
     );
   }
 
-  /// 顶部头像区域（包含状态栏）
+  /// 顶部头像区域（包含状态栏）- 极简白色设计
   Widget _buildHeader(BuildContext context) {
     final user = _apiService.currentUser;
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
       padding: EdgeInsets.only(
-        top: statusBarHeight + 16,  // 状态栏高度 + 额外间距
+        top: statusBarHeight + 12,
         left: 20,
         right: 20,
         bottom: 16,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey[200]!,
+            width: 1,
           ),
-        ],
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 用户头像（可点击）- 加大尺寸
-          GestureDetector(
-            onTap: _toggleDrawer,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).primaryColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: user?.avatarUrl != null
-                  ? CircleAvatar(
-                      radius: 26,  // 从20增大到26
-                      backgroundColor: Theme.of(context).primaryColor,
-                      child: ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: user!.avatarUrl!,
-                          width: 52,
-                          height: 52,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Theme.of(context).primaryColor,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Theme.of(context).primaryColor,
-                            child: Center(
-                              child: Text(
-                                user.nickname.isNotEmpty
-                                    ? user.nickname[0].toUpperCase()
-                                    : user.username[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 22,  // 字体也相应增大
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  : CircleAvatar(
-                      radius: 26,  // 从20增大到26
-                      backgroundColor: Theme.of(context).primaryColor,
-                      child: Text(
-                        user?.nickname.isNotEmpty == true
-                            ? user!.nickname[0].toUpperCase()
-                            : user?.username[0].toUpperCase() ?? '?',
-                        style: const TextStyle(
-                          fontSize: 22,  // 字体也相应增大
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 16),  // 增加间距
-          // 显示用户账号
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  user?.nickname.isNotEmpty == true
-                      ? user!.nickname
-                      : user?.username ?? '用户',
-                  style: const TextStyle(
-                    fontSize: 20,  // 从18增大到20
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              // 大标题
+              const Text(
+                '消息',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                  height: 1.2,
                 ),
-                const SizedBox(height: 2),
-                if (user?.username != null)
-                  Text(
-                    user!.username,
-                    style: TextStyle(
-                      fontSize: 13,  // 从12增大到13
-                      color: Colors.grey[600],
-                      letterSpacing: 0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-          // 搜索好友按钮
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.person_add_rounded,
-                color: Theme.of(context).primaryColor,
               ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddFriendPage(),
-                  ),
-                ).then((_) {
-                  // 从添加好友页面返回后刷新会话列表
-                  _loadConversationList();
-                });
-              },
-              tooltip: '添加好友',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 空状态页面（支持下拉刷新）
-  Widget _buildEmptyState() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight,
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 空状态图标 - 优化样式
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.05),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 80,
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    '暂无聊天',
-                    style: TextStyle(
-                      fontSize: 22,
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '去好友列表找人聊天吧',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey[500],
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // 下拉刷新提示
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.refresh_rounded,
-                          size: 16,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '下拉刷新',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// 会话列表
-  Widget _buildConversationList() {
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: _conversationList.length,
-      separatorBuilder: (context, index) => Divider(
-        height: 1,
-        thickness: 0.5,
-        indent: 88,  // 对齐头像右侧
-        endIndent: 20,
-        color: Colors.grey[200],
-      ),
-      itemBuilder: (context, index) {
-        final conversation = _conversationList[index];
-        return _buildConversationItem(conversation);
-      },
-    );
-  }
-
-  /// 会话列表项
-  Widget _buildConversationItem(ChatConversation conversation) {
-    return Dismissible(
-      key: Key(conversation.id),
-      background: Container(
-        color: Colors.blue,
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: const Icon(
-          Icons.push_pin,
-          color: Colors.white,
-        ),
-      ),
-      secondaryBackground: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-        ),
-      ),
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          // 左滑置顶
-          _togglePin(conversation);
-          return false;
-        } else {
-          // 右滑删除
-          return await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('删除会话'),
-              content: Text('确定要删除与"${conversation.targetName}"的聊天吗？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('取消'),
+              const Spacer(),
+              // 添加好友按钮 - 圆形图标
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text(
-                    '删除',
-                    style: TextStyle(color: Colors.red),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.add_rounded,
+                    color: Theme.of(context).primaryColor,
+                    size: 26,
                   ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AddFriendPage(),
+                      ),
+                    ).then((_) {
+                      _loadConversationList();
+                    });
+                  },
+                  tooltip: '添加好友',
                 ),
-              ],
-            ),
-          );
-        }
-      },
-      onDismissed: (direction) {
-        if (direction == DismissDirection.endToStart) {
-          _deleteConversation(conversation);
-        }
-      },
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),  // 增加内边距
-        leading: Stack(
-          children: [
-            // 好友头像 - 缩小尺寸
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
-              child: conversation.targetAvatarUrl != null
-                  ? CircleAvatar(
-                      radius: 24,  // 从28缩小到24
-                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: conversation.targetAvatarUrl!,
-                          width: 48,  // 从56缩小到48
-                          height: 48,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).primaryColor.withOpacity(0.5),
-                                ),
-                              ),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            child: Center(
-                              child: Text(
-                                conversation.targetName.isNotEmpty
-                                    ? conversation.targetName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  fontSize: 18,  // 从20缩小到18
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  : CircleAvatar(
-                      radius: 24,  // 从28缩小到24
-                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Text(
-                        conversation.targetName.isNotEmpty
-                            ? conversation.targetName[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 18,  // 从20缩小到18
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-            ),
-            // 未读消息角标 - 优化样式和位置
-            if (conversation.unreadCount > 0)
-              Positioned(
-                right: -2,
-                top: -2,
+              const SizedBox(width: 4),
+              // 用户头像（可点击）- 大圆形设计
+              GestureDetector(
+                onTap: _toggleDrawer,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white,
+                      color: Theme.of(context).primaryColor.withOpacity(0.2),
                       width: 2,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 20,
-                    minHeight: 20,
-                  ),
-                  child: Text(
-                    conversation.unreadCount > 99
-                        ? '99+'
-                        : conversation.unreadCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: user?.avatarUrl != null
+                      ? CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: user!.avatarUrl!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                child: Center(
+                                  child: Text(
+                                    user.nickname.isNotEmpty
+                                        ? user.nickname[0].toUpperCase()
+                                        : user.username[0].toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Theme.of(context).primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Text(
+                            user?.nickname.isNotEmpty == true
+                                ? user!.nickname[0].toUpperCase()
+                                : user?.username[0].toUpperCase() ?? '?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                 ),
-              ),
-          ],
-        ),
-        title: Row(
-          children: [
-            // 置顶图标 - 优化样式
-            if (conversation.isPinned)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Icon(
-                  Icons.push_pin_rounded,
-                  size: 16,
-                  color: Colors.orange[700],
-                ),
-              ),
-            // 免打扰图标 - 优化样式
-            if (conversation.isMuted)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Icon(
-                  Icons.notifications_off_rounded,
-                  size: 16,
-                  color: Colors.grey[500],
-                ),
-              ),
-            Expanded(
-              child: FutureBuilder<String?>(
-                future: _remarkService.getRemark(int.tryParse(conversation.targetId) ?? 0),
-                builder: (context, snapshot) {
-                  final displayName = snapshot.data ?? conversation.targetName;
-                  return Text(
-                    displayName,
-                    style: TextStyle(
-                      fontSize: 17,  // 从16增大到17
-                      fontWeight: FontWeight.w600,  // 从w500加粗到w600
-                      color: Colors.black87,
-                      letterSpacing: 0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),  // 增加标题和副标题的间距
-          child: Text(
-            _formatLastMessage(conversation.lastMessage),
-            style: TextStyle(
-              fontSize: 14,
-              color: conversation.unreadCount > 0
-                  ? Colors.black.withOpacity(0.7)  // 未读消息深色
-                  : Colors.grey[600],  // 已读消息灰色
-              height: 1.3,
-              letterSpacing: 0.2,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        trailing: SizedBox(
-          width: 80,  // 固定宽度，避免布局抖动
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // 时间显示 - 优化样式
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: conversation.unreadCount > 0 
-                      ? Theme.of(context).primaryColor.withOpacity(0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  _formatTime(conversation.lastMessageTime),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: conversation.unreadCount > 0
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey[500],
-                    fontWeight: conversation.unreadCount > 0 
-                        ? FontWeight.w600 
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // 更多按钮 - 优化样式
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 20,
-                  color: Colors.grey[400],
-                ),
-                padding: EdgeInsets.zero,
-                iconSize: 20,
-                onSelected: (value) {
-                  if (value == 'delete') {
-                    _showDeleteDialog(conversation);
-                  } else if (value == 'pin') {
-                    _togglePin(conversation);
-                  } else if (value == 'mute') {
-                    _toggleMute(conversation);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
-                        SizedBox(width: 12),
-                        Text('删除会话', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
-        onTap: () {
-          // 跳转到聊天页面
-          // 构建对方用户信息
-          final friend = User(
-            id: int.tryParse(conversation.targetId) ?? 0,
-            username: conversation.targetName,
-            email: '',
-            nickname: conversation.targetName,
-            avatarUrl: conversation.targetAvatarUrl,
-            phone: null,
-            status: 'ACTIVE',
-            userType: 'NORMAL',
-            isGuest: false,
-            createdAt: '',
-            updatedAt: '',
-          );
+        ],
+      ),
+    );
+  }
 
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ChatPage(
-                friend: friend,
-                conversationId: int.tryParse(conversation.id),
+  /// 空状态页面（支持下拉刷新）- 极简设计
+  Widget _buildEmptyState() {
+    return Container(
+      color: Colors.white,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 空状态图标 - 简洁设计
+                    Icon(
+                      Icons.forum_outlined,
+                      size: 120,
+                      color: Colors.grey[300],
+                    ),
+                    const SizedBox(height: 32),
+                    // 标题
+                    Text(
+                      '暂无聊天',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // 副标题
+                    Text(
+                      '去好友列表找人聊天吧',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ).then((_) {
-            // 从聊天页面返回后刷新会话列表
-            _loadConversationList();
-          });
+          );
         },
+      ),
+    );
+  }
+
+  /// 会话列表 - 极简设计
+  Widget _buildConversationList() {
+    return Container(
+      color: Colors.white,  // 白色背景
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 0),
+        itemCount: _conversationList.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          thickness: 1,
+          indent: 96,  // 对齐内容区域
+          endIndent: 20,
+          color: Colors.grey[100],
+        ),
+        itemBuilder: (context, index) {
+          final conversation = _conversationList[index];
+          return _buildConversationItem(conversation);
+        },
+      ),
+    );
+  }
+
+  /// 会话列表项 - 极简设计
+  Widget _buildConversationItem(ChatConversation conversation) {
+    // 根据用户ID生成颜色（每个用户有固定的颜色）
+    final colorIndex = (int.tryParse(conversation.targetId) ?? 0) % 8;
+    final accentColors = [
+      Theme.of(context).primaryColor,
+      Colors.blue,
+      Colors.teal,
+      Colors.orange,
+      Colors.pink,
+      Colors.indigo,
+      Colors.amber,
+      Colors.cyan,
+    ];
+    final accentColor = accentColors[colorIndex];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: conversation.unreadCount > 0
+            ? Theme.of(context).primaryColor.withOpacity(0.03)
+            : Colors.transparent,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // 跳转到聊天页面
+            final friend = User(
+              id: int.tryParse(conversation.targetId) ?? 0,
+              username: conversation.targetName,
+              email: '',
+              nickname: conversation.targetName,
+              avatarUrl: conversation.targetAvatarUrl,
+              phone: null,
+              status: 'ACTIVE',
+              userType: 'NORMAL',
+              isGuest: false,
+              createdAt: '',
+              updatedAt: '',
+            );
+
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ChatPage(
+                  friend: friend,
+                  conversationId: int.tryParse(conversation.id),
+                ),
+              ),
+            ).then((_) {
+              _loadConversationList();
+            });
+          },
+          child: Row(
+            children: [
+              // 左侧彩色竖条
+              Container(
+                width: 4,
+                height: 88,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: conversation.unreadCount > 0
+                        ? [accentColor, accentColor.withOpacity(0.3)]
+                        : [Colors.transparent, Colors.transparent],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // 头像
+              Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: conversation.unreadCount > 0
+                            ? accentColor.withOpacity(0.3)
+                            : Colors.grey[200]!,
+                        width: 2,
+                      ),
+                    ),
+                    child: conversation.targetAvatarUrl != null
+                        ? CircleAvatar(
+                            radius: 30,
+                            backgroundColor: accentColor.withOpacity(0.1),
+                            child: ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: conversation.targetAvatarUrl!,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: accentColor.withOpacity(0.1),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: accentColor.withOpacity(0.1),
+                                  child: Center(
+                                    child: Text(
+                                      conversation.targetName.isNotEmpty
+                                          ? conversation.targetName[0].toUpperCase()
+                                          : '?',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        color: accentColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : CircleAvatar(
+                            radius: 30,
+                            backgroundColor: accentColor.withOpacity(0.1),
+                            child: Text(
+                              conversation.targetName.isNotEmpty
+                                  ? conversation.targetName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                fontSize: 24,
+                                color: accentColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                  ),
+                  // 未读角标
+                  if (conversation.unreadCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        child: Text(
+                          conversation.unreadCount > 99
+                              ? '99+'
+                              : conversation.unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              // 内容区域
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 第一行：名称、时间、操作
+                    Row(
+                      children: [
+                        // 名称
+                        Expanded(
+                          child: FutureBuilder<String?>(
+                            future: _remarkService.getRemark(int.tryParse(conversation.targetId) ?? 0),
+                            builder: (context, snapshot) {
+                              final displayName = snapshot.data ?? conversation.targetName;
+                              return Row(
+                                children: [
+                                  // 置顶图标
+                                  if (conversation.isPinned)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: Icon(
+                                        Icons.push_pin_rounded,
+                                        size: 14,
+                                        color: accentColor,
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      displayName,
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: conversation.unreadCount > 0
+                                            ? FontWeight.bold
+                                            : FontWeight.w600,
+                                        color: Colors.black87,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        // 时间
+                        Text(
+                          _formatTime(conversation.lastMessageTime),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: conversation.unreadCount > 0
+                                ? accentColor
+                                : Colors.grey[500],
+                            fontWeight: conversation.unreadCount > 0
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        // 更多按钮
+                        PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            size: 20,
+                            color: Colors.grey[400],
+                          ),
+                          padding: EdgeInsets.zero,
+                          offset: const Offset(-12, 0),
+                          onSelected: (value) {
+                            if (value == 'delete') {
+                              _showDeleteDialog(conversation);
+                            } else if (value == 'pin') {
+                              _togglePin(conversation);
+                            } else if (value == 'mute') {
+                              _toggleMute(conversation);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'pin',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    conversation.isPinned
+                                        ? Icons.push_pin_outlined
+                                        : Icons.push_pin,
+                                    size: 18,
+                                    color: accentColor,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    conversation.isPinned ? '取消置顶' : '置顶',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'mute',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    conversation.isMuted
+                                        ? Icons.notifications_active_outlined
+                                        : Icons.notifications_off_outlined,
+                                    size: 18,
+                                    color: Colors.grey[700],
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    conversation.isMuted ? '取消免打扰' : '免打扰',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                                  SizedBox(width: 12),
+                                  Text('删除会话', style: TextStyle(color: Colors.red, fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // 第二行：最后消息和免打扰图标
+                    Row(
+                      children: [
+                        // 免打扰图标
+                        if (conversation.isMuted)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.notifications_off_rounded,
+                              size: 14,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        // 最后消息
+                        Expanded(
+                          child: Text(
+                            _formatLastMessage(conversation.lastMessage),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: conversation.unreadCount > 0
+                                  ? Colors.black.withOpacity(0.6)
+                                  : Colors.grey[600],
+                              height: 1.4,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

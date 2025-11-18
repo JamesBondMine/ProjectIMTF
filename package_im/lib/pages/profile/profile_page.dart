@@ -673,54 +673,294 @@ class _ProfilePageState extends State<ProfilePage> {
     final TextEditingController phoneController = TextEditingController(
       text: user?.phone ?? '',
     );
+    String errorText = '';
+    int charCount = phoneController.text.length;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('设置手机号'),
-          content: TextField(
-            controller: phoneController,
-            autofocus: true,
-            keyboardType: TextInputType.phone,
-            maxLength: 11,
-            decoration: const InputDecoration(
-              hintText: '请输入手机号',
-              border: OutlineInputBorder(),
-              counterText: '',
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                final newPhone = phoneController.text.trim();
-                if (newPhone.isEmpty) {
-                  EasyLoading.showError('手机号不能为空');
-                  return;
-                }
-                // 简单的手机号格式验证
-                if (newPhone.length != 11 || !RegExp(r'^1[3-9]\d{9}$').hasMatch(newPhone)) {
-                  EasyLoading.showError('请输入正确的手机号格式');
-                  return;
-                }
-                Navigator.of(context).pop();
-                _updatePhone(newPhone);
-              },
-              child: Text(
-                '确定',
-                style: TextStyle(color: Theme.of(context).primaryColor),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.phone_android_rounded,
+                    color: Theme.of(context).primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('设置手机号'),
+                ],
               ),
-            ),
-          ],
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 当前手机号提示
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              user?.phone != null && user!.phone!.isNotEmpty
+                                  ? '当前手机号：${_formatPhoneDisplay(user.phone!)}'
+                                  : '当前未设置手机号',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 输入框
+                    TextField(
+                      controller: phoneController,
+                      autofocus: true,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 11,
+                      decoration: InputDecoration(
+                        labelText: '手机号',
+                        hintText: '请输入11位手机号',
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).primaryColor,
+                            width: 2,
+                          ),
+                        ),
+                        counterText: '',
+                        errorText: errorText.isEmpty ? null : errorText,
+                        suffixIcon: phoneController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: () {
+                                  setState(() {
+                                    phoneController.clear();
+                                    charCount = 0;
+                                    errorText = '';
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        // 只允许输入数字
+                        final filteredValue = value.replaceAll(RegExp(r'[^\d]'), '');
+                        if (filteredValue != value) {
+                          phoneController.value = TextEditingValue(
+                            text: filteredValue,
+                            selection: TextSelection.collapsed(
+                              offset: filteredValue.length,
+                            ),
+                          );
+                        }
+                        
+                        setState(() {
+                          charCount = filteredValue.length;
+                          errorText = _validatePhone(filteredValue);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // 字符计数和格式化预览
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 格式化预览
+                        if (phoneController.text.isNotEmpty && errorText.isEmpty)
+                          Text(
+                            _formatPhoneDisplay(phoneController.text),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        else
+                          const SizedBox(),
+                        // 字符计数
+                        Text(
+                          '$charCount/11',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: charCount == 11
+                                ? Theme.of(context).primaryColor
+                                : charCount > 11
+                                    ? Colors.red
+                                    : Colors.grey[600],
+                            fontWeight: charCount == 11 ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // 规则说明
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.rule_rounded,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '手机号规则',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          _buildRuleItem('长度：11位数字'),
+                          _buildRuleItem('格式：1开头的手机号'),
+                          _buildRuleItem('支持：移动、联通、电信'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                  ),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final newPhone = phoneController.text.trim();
+                    final error = _validatePhone(newPhone);
+                    
+                    if (error.isNotEmpty) {
+                      setState(() {
+                        errorText = error;
+                      });
+                      return;
+                    }
+                    
+                    if (newPhone == user?.phone) {
+                      EasyLoading.showInfo('手机号未修改');
+                      return;
+                    }
+                    
+                    Navigator.of(context).pop();
+                    _updatePhone(newPhone);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  /// 验证手机号
+  String _validatePhone(String phone) {
+    if (phone.isEmpty) {
+      return '手机号不能为空';
+    }
+    
+    if (phone.length != 11) {
+      return '手机号必须是11位数字';
+    }
+    
+    // 验证手机号格式：1开头，第二位是3-9
+    if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(phone)) {
+      return '请输入正确的手机号格式';
+    }
+    
+    return '';
+  }
+
+  /// 格式化手机号显示（带空格）
+  String _formatPhoneDisplay(String phone) {
+    if (phone.length <= 3) {
+      return phone;
+    } else if (phone.length <= 7) {
+      return '${phone.substring(0, 3)} ${phone.substring(3)}';
+    } else if (phone.length <= 11) {
+      return '${phone.substring(0, 3)} ${phone.substring(3, 7)} ${phone.substring(7)}';
+    }
+    return phone;
+  }
+
+  /// 构建规则项
+  Widget _buildRuleItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: 12,
+            color: Colors.grey[500],
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
