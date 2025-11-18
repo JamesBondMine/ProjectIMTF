@@ -17,14 +17,62 @@ class FriendListPage extends StatefulWidget {
 
 class _FriendListPageState extends State<FriendListPage> {
   List<User> _friendList = [];
+  List<User> _filteredFriendList = [];
   bool _isLoading = false;
+  bool _isSearching = false;
   final _apiService = ApiService();
   final _remarkService = RemarkService();
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadFriendList();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 搜索变化监听
+  void _onSearchChanged() {
+    _performSearch(_searchController.text);
+  }
+
+  /// 执行搜索
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredFriendList = _friendList;
+      });
+      return;
+    }
+
+    final queryLower = query.toLowerCase();
+    final results = <User>[];
+
+    for (final friend in _friendList) {
+      // 获取备注
+      final remark = await _remarkService.getRemark(friend.id);
+      
+      // 搜索用户名、昵称、备注
+      final username = friend.username.toLowerCase();
+      final nickname = friend.nickname.toLowerCase();
+      final remarkLower = (remark ?? '').toLowerCase();
+      
+      if (username.contains(queryLower) || 
+          nickname.contains(queryLower) || 
+          remarkLower.contains(queryLower)) {
+        results.add(friend);
+      }
+    }
+
+    setState(() {
+      _filteredFriendList = results;
+    });
   }
 
   /// 加载好友列表
@@ -41,6 +89,7 @@ class _FriendListPageState extends State<FriendListPage> {
         setState(() {
           _friendList = response.data!;
           _sortFriendList();
+          _filteredFriendList = _friendList;  // 初始化过滤列表
         });
       } else {
         if (response.message.isNotEmpty) {
@@ -123,26 +172,64 @@ class _FriendListPageState extends State<FriendListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('好友'),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: '搜索好友...',
+                  hintStyle: TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+              )
+            : const Text('好友'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add),
-            onPressed: _navigateToAddFriend,
-            tooltip: '添加好友',
-          ),
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                setState(() {
+                  _searchController.clear();
+                  _isSearching = false;
+                  _filteredFriendList = _friendList;
+                });
+              },
+              tooltip: '取消搜索',
+            )
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = true;
+                });
+              },
+              tooltip: '搜索',
+            ),
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              onPressed: _navigateToAddFriend,
+              tooltip: '添加好友',
+            ),
+          ],
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _friendList.isEmpty
               ? _buildEmptyState()
-              : _buildFriendList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddFriend,
-        tooltip: '添加好友',
-        child: const Icon(Icons.add),
-      ),
+              : _filteredFriendList.isEmpty
+                  ? _buildSearchEmptyState()
+                  : _buildFriendList(),
+      floatingActionButton: _isSearching
+          ? null
+          : FloatingActionButton(
+              onPressed: _navigateToAddFriend,
+              tooltip: '添加好友',
+              child: const Icon(Icons.add),
+            ),
     );
   }
 
@@ -194,18 +281,91 @@ class _FriendListPageState extends State<FriendListPage> {
     );
   }
 
+  /// 搜索无结果状态页面
+  Widget _buildSearchEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 100,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '未找到相关好友',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '试试其他关键词吧',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 好友列表
   Widget _buildFriendList() {
     return RefreshIndicator(
       onRefresh: _loadFriendList,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _friendList.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final friend = _friendList[index];
-          return _buildFriendItem(friend);
-        },
+      child: Column(
+        children: [
+          // 搜索结果提示
+          if (_isSearching && _searchController.text.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[200]!,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '找到 ${_filteredFriendList.length} 个好友',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // 好友列表
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _filteredFriendList.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final friend = _filteredFriendList[index];
+                return _buildFriendItem(friend);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
