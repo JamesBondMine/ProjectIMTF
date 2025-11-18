@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/chat_conversation.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
@@ -30,7 +31,7 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
   // 侧边面板相关
   late AnimationController _drawerController;
   late Animation<Offset> _drawerAnimation;
-  bool _isDrawerOpen = true;  // 默认打开
+  bool _isDrawerOpen = false;  // 初始值，实际由设置决定
 
   @override
   void initState() {
@@ -50,8 +51,8 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
       curve: Curves.easeInOut,
     ));
     
-    // 默认展开侧边面板
-    _drawerController.forward();
+    // 根据设置决定是否展开侧边面板
+    _loadDrawerSetting();
     
     // 注册消息监听器
     _apiService.addMessageListener(_onWebSocketMessage);
@@ -61,6 +62,21 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
     
     // 启动定时器：每8秒自动刷新
     _startAutoRefresh();
+  }
+  
+  /// 加载侧边面板设置
+  Future<void> _loadDrawerSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final autoOpen = prefs.getBool('auto_open_drawer') ?? true;  // 默认为 true
+    
+    setState(() {
+      _isDrawerOpen = autoOpen;
+    });
+    
+    // 根据设置决定是否展开
+    if (autoOpen) {
+      _drawerController.forward();
+    }
   }
 
   @override

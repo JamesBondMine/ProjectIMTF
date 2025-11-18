@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
@@ -22,6 +23,30 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _apiService = ApiService();
   final _imagePicker = ImagePicker();
+  bool _autoOpenDrawer = true;  // 默认自动打开侧边面板
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAutoOpenSetting();
+  }
+
+  /// 加载自动打开设置
+  Future<void> _loadAutoOpenSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoOpenDrawer = prefs.getBool('auto_open_drawer') ?? true;  // 默认为 true
+    });
+  }
+
+  /// 保存自动打开设置
+  Future<void> _saveAutoOpenSetting(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auto_open_drawer', value);
+    setState(() {
+      _autoOpenDrawer = value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +289,19 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
+          _buildSwitchItem(
+            icon: Icons.open_in_browser_rounded,
+            title: '启动时自动打开个人中心',
+            value: _autoOpenDrawer,
+            onChanged: (value) {
+              _saveAutoOpenSetting(value);
+              EasyLoading.showToast(
+                value ? '已开启自动打开' : '已关闭自动打开',
+                duration: const Duration(seconds: 2),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
           _buildSettingItem(
             imagePath: 'assets/images/anquanyinsi.png',
             title: '隐私协议',
@@ -421,6 +459,27 @@ class _ProfilePageState extends State<ProfilePage> {
       title: Text(title),
       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       onTap: onTap,
+    );
+  }
+
+  /// 开关设置项
+  Widget _buildSwitchItem({
+    required IconData icon,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.grey[600]),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: Theme.of(context).primaryColor,
+      ),
     );
   }
 
