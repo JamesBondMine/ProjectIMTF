@@ -101,12 +101,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _navigateToAgreement(String title, String content) {
+  void _navigateToAgreement(String title, String htmlFile) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => AgreementPage(
           title: title,
-          content: content,
+          htmlFile: htmlFile,
         ),
       ),
     );
@@ -281,7 +281,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ..onTap = () {
                                   _navigateToAgreement(
                                     '隐私协议',
-                                    AgreementPage.privacyContent,
+                                    'privacy_policy.html',
                                   );
                                 },
                             ),
@@ -296,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ..onTap = () {
                                   _navigateToAgreement(
                                     '用户协议',
-                                    AgreementPage.userContent,
+                                    'user_agreement.html',
                                   );
                                 },
                             ),

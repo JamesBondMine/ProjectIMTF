@@ -272,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 MaterialPageRoute(
                   builder: (context) => const AgreementPage(
                     title: '隐私协议',
-                    content: AgreementPage.privacyContent,
+                    htmlFile: 'privacy_policy.html',
                   ),
                 ),
               );
@@ -287,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 MaterialPageRoute(
                   builder: (context) => const AgreementPage(
                     title: '用户协议',
-                    content: AgreementPage.userContent,
+                    htmlFile: 'user_agreement.html',
                   ),
                 ),
               );
