@@ -66,6 +66,8 @@ dependencies:
   audioplayers: ^6.1.0
   # 文本朗读（TTS）
   flutter_tts: ^4.2.0
+  # Apple 登录
+  sign_in_with_apple: ^6.1.3
 
 dev_dependencies:
   flutter_test:

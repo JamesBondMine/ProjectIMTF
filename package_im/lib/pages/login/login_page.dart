@@ -3,6 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:package_im/services/api_service.dart';
 import 'package:package_im/pages/home_page.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:io' show Platform;
 import 'agreement_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
@@ -110,6 +112,107 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  /// Apple 登录
+  Future<void> _handleAppleSignIn() async {
+    // 先检查是否勾选协议
+    if (!_isAgreed) {
+      EasyLoading.showError('请先阅读并同意隐私协议和用户协议');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 检查是否支持 Apple 登录
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        if (mounted) {
+          EasyLoading.showError('当前设备不支持 Apple 登录');
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // 发起 Apple 登录请求
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      if (mounted) {
+        // 获取到 Apple 返回的凭证
+        final identityToken = credential.identityToken;
+        // final authorizationCode = credential.authorizationCode;
+        // final userIdentifier = credential.userIdentifier;
+
+        if (identityToken != null) {
+          // TODO: 调用后端 API 进行 Apple 登录验证
+          // 这里需要后端提供 Apple 登录的接口
+          // final response = await _apiService.appleLogin(
+          //   identityToken: identityToken,
+          //   authorizationCode: credential.authorizationCode,
+          //   userIdentifier: credential.userIdentifier,
+          // );
+
+          // 暂时模拟登录成功
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+
+            EasyLoading.showSuccess('Apple 登录成功！');
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            if (mounted) {
+              // 跳转到主页
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => HomePage(
+                    username: credential.givenName ?? 
+                             credential.familyName ?? 
+                             'Apple用户',
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            EasyLoading.showError('Apple 登录失败，未获取到有效凭证');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (e is SignInWithAppleAuthorizationException) {
+          // 用户取消登录
+          if (e.code == AuthorizationErrorCode.canceled) {
+            EasyLoading.showInfo('已取消 Apple 登录');
+          } else {
+            EasyLoading.showError('Apple 登录失败: ${e.message}');
+          }
+        } else {
+          EasyLoading.showError('Apple 登录失败，请重试');
+        }
+      }
+    }
   }
 
   @override
@@ -310,6 +413,44 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                       ),
+                      const SizedBox(height: 20),
+                      // 分隔线
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey[300],
+                              thickness: 1,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              '或',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey[300],
+                              thickness: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Apple 登录按钮（仅在 iOS 平台显示）
+                      if (Platform.isIOS)
+                        SignInWithAppleButton(
+                          onPressed: _isLoading ? () {} : _handleAppleSignIn,
+                          text: 'Sign in with Apple',
+                          height: 50,
+                          style: SignInWithAppleButtonStyle.black,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                     ],
                   ),
                 ),
