@@ -12,6 +12,8 @@ class Moment {
   final int commentCount;
   final bool liked;
   final bool isFriend;
+  final bool isMyMoment; // 是否是我发布的动态
+  final bool isFollowing; // 是否已关注该用户
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -28,6 +30,8 @@ class Moment {
     required this.commentCount,
     required this.liked,
     required this.isFriend,
+    required this.isMyMoment,
+    required this.isFollowing,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -49,6 +53,8 @@ class Moment {
       commentCount: json['commentCount'] ?? 0,
       liked: json['liked'] ?? false,
       isFriend: json['isFriend'] ?? false,
+      isMyMoment: json['isMyMoment'] ?? false,
+      isFollowing: json['isFollowing'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -72,6 +78,8 @@ class Moment {
       'commentCount': commentCount,
       'liked': liked,
       'isFriend': isFriend,
+      'isMyMoment': isMyMoment,
+      'isFollowing': isFollowing,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -91,6 +99,8 @@ class Moment {
     int? commentCount,
     bool? liked,
     bool? isFriend,
+    bool? isMyMoment,
+    bool? isFollowing,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -107,6 +117,8 @@ class Moment {
       commentCount: commentCount ?? this.commentCount,
       liked: liked ?? this.liked,
       isFriend: isFriend ?? this.isFriend,
+      isMyMoment: isMyMoment ?? this.isMyMoment,
+      isFollowing: isFollowing ?? this.isFollowing,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

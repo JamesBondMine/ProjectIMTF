@@ -237,6 +237,50 @@ class _RecommendTabState extends State<_RecommendTab> {
     );
   }
 
+  /// 处理关注/取消关注
+  Future<void> _handleFollow(Moment moment) async {
+    // 乐观更新UI
+    final index = _moments.indexWhere((m) => m.id == moment.id);
+    if (index == -1) return;
+
+    final originalMoment = _moments[index];
+    final newFollowingState = !originalMoment.isFollowing;
+
+    setState(() {
+      _moments[index] = originalMoment.copyWith(
+        isFollowing: newFollowingState,
+      );
+    });
+
+    try {
+      final response = newFollowingState
+          ? await _apiService.followUser(targetUserId: moment.userId)
+          : await _apiService.unfollowUser(targetUserId: moment.userId);
+
+      if (mounted) {
+        if (response.success) {
+          EasyLoading.showSuccess(newFollowingState ? '关注成功' : '取消关注成功');
+        } else {
+          // 关注/取消关注失败，恢复原状态
+          setState(() {
+            _moments[index] = originalMoment;
+          });
+          EasyLoading.showError(response.message.isNotEmpty 
+              ? response.message 
+              : (newFollowingState ? '关注失败' : '取消关注失败'));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // 发生异常，恢复原状态
+        setState(() {
+          _moments[index] = originalMoment;
+        });
+        EasyLoading.showError('操作失败: $e');
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -483,23 +527,24 @@ class _RecommendTabState extends State<_RecommendTab> {
                     ],
                   ),
                 ),
-                // 关注按钮（仅非好友显示）
-                if (!moment.isFriend)
+                // 关注按钮（不是自己的动态才显示）
+                if (!moment.isMyMoment)
                   TextButton(
-                    onPressed: () {
-                      // TODO: 关注功能
-                      EasyLoading.showToast('关注功能开发中');
-                    },
+                    onPressed: () => _handleFollow(moment),
                     style: TextButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: moment.isFollowing 
+                          ? Colors.grey[200] 
+                          : Theme.of(context).primaryColor,
+                      foregroundColor: moment.isFollowing 
+                          ? Colors.grey[700] 
+                          : Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
-                      '关注',
-                      style: TextStyle(fontSize: 13),
+                    child: Text(
+                      moment.isFollowing ? '已关注' : '关注',
+                      style: const TextStyle(fontSize: 13),
                     ),
                   ),
                 // 更多选项按钮
@@ -787,6 +832,50 @@ class _FollowTabState extends State<_FollowTab> {
         builder: (context) => FriendDetailPage(friend: user),
       ),
     );
+  }
+
+  /// 处理关注/取消关注
+  Future<void> _handleFollow(Moment moment) async {
+    // 乐观更新UI
+    final index = _moments.indexWhere((m) => m.id == moment.id);
+    if (index == -1) return;
+
+    final originalMoment = _moments[index];
+    final newFollowingState = !originalMoment.isFollowing;
+
+    setState(() {
+      _moments[index] = originalMoment.copyWith(
+        isFollowing: newFollowingState,
+      );
+    });
+
+    try {
+      final response = newFollowingState
+          ? await _apiService.followUser(targetUserId: moment.userId)
+          : await _apiService.unfollowUser(targetUserId: moment.userId);
+
+      if (mounted) {
+        if (response.success) {
+          EasyLoading.showSuccess(newFollowingState ? '关注成功' : '取消关注成功');
+        } else {
+          // 关注/取消关注失败，恢复原状态
+          setState(() {
+            _moments[index] = originalMoment;
+          });
+          EasyLoading.showError(response.message.isNotEmpty 
+              ? response.message 
+              : (newFollowingState ? '关注失败' : '取消关注失败'));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // 发生异常，恢复原状态
+        setState(() {
+          _moments[index] = originalMoment;
+        });
+        EasyLoading.showError('操作失败: $e');
+      }
+    }
   }
 
   @override
@@ -1159,6 +1248,26 @@ class _FollowTabState extends State<_FollowTab> {
                     ],
                   ),
                 ),
+                // 关注按钮（不是自己的动态才显示）
+                if (!moment.isMyMoment)
+                  TextButton(
+                    onPressed: () => _handleFollow(moment),
+                    style: TextButton.styleFrom(
+                      backgroundColor: moment.isFollowing 
+                          ? Colors.grey[200] 
+                          : Theme.of(context).primaryColor,
+                      foregroundColor: moment.isFollowing 
+                          ? Colors.grey[700] 
+                          : Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      moment.isFollowing ? '已关注' : '关注',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.more_horiz),
                   onPressed: () => _showMomentOptions(moment),

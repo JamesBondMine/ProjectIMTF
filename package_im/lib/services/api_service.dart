@@ -745,6 +745,56 @@ class ApiService {
     }
   }
 
+  /// 关注用户
+  /// 
+  /// [targetUserId] 目标用户ID
+  Future<ApiResponse<dynamic>> followUser({
+    required int targetUserId,
+  }) async {
+    try {
+      debugPrint('关注用户: targetUserId=$targetUserId');
+      
+      final response = await _httpManager.post(
+        '/api/friends/follow/$targetUserId',
+        showLoading: false,
+      );
+      
+      if (response.success) {
+        debugPrint('关注成功');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('关注用户异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 取消关注用户
+  /// 
+  /// [targetUserId] 目标用户ID
+  Future<ApiResponse<dynamic>> unfollowUser({
+    required int targetUserId,
+  }) async {
+    try {
+      debugPrint('取消关注用户: targetUserId=$targetUserId');
+      
+      final response = await _httpManager.delete(
+        '/api/friends/follow/$targetUserId',
+        showLoading: false,
+      );
+      
+      if (response.success) {
+        debugPrint('取消关注成功');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('取消关注用户异常: $e');
+      rethrow;
+    }
+  }
+
   /// 获取好友列表
   Future<ApiResponse<List<User>>> getFriendList() async {
     try {
