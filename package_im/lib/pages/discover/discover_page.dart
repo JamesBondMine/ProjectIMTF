@@ -4,6 +4,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/moment.dart';
 import '../../services/api_service.dart';
 import 'publish_moment_page.dart';
+import 'moment_comments_page.dart';
 
 /// 发现页面
 class DiscoverPage extends StatefulWidget {
@@ -499,10 +500,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                 icon: Icons.chat_bubble_outline,
                 label: '${moment.commentCount}',
                 color: Colors.grey[600],
-                onTap: () {
-                  // TODO: 查看评论
-                  EasyLoading.showToast('评论功能开发中');
-                },
+                onTap: () => _navigateToComments(moment),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
@@ -560,6 +558,21 @@ class _RecommendTabState extends State<_RecommendTab> {
         _moments[index] = moment;
       });
       EasyLoading.showError('操作失败');
+    }
+  }
+
+  /// 跳转到评论页面
+  Future<void> _navigateToComments(Moment moment) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => MomentCommentsPage(moment: moment),
+      ),
+    );
+
+    // 如果发表了评论，刷新当前动态
+    if (result == true && mounted) {
+      // TODO: 可以选择刷新整个列表或只更新该动态的评论数
+      _loadMoments(isRefresh: true);
     }
   }
 
@@ -797,6 +810,20 @@ class _FollowTabState extends State<_FollowTab> {
     }
   }
 
+  /// 跳转到评论页面
+  Future<void> _navigateToComments(Moment moment) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => MomentCommentsPage(moment: moment),
+      ),
+    );
+
+    // 如果发表了评论，刷新当前动态
+    if (result == true && mounted) {
+      _loadMoments(isRefresh: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _moments.isEmpty) {
@@ -963,10 +990,7 @@ class _FollowTabState extends State<_FollowTab> {
                 icon: Icons.chat_bubble_outline,
                 label: '${moment.commentCount}',
                 color: Colors.grey[600],
-                onTap: () {
-                  // TODO: 查看评论
-                  EasyLoading.showToast('评论功能开发中');
-                },
+                onTap: () => _navigateToComments(moment),
               ),
               const SizedBox(width: 24),
               _buildActionButton(

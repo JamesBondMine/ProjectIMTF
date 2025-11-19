@@ -390,6 +390,68 @@ class ApiService {
     }
   }
 
+  /// 获取动态评论列表
+  /// 
+  /// [momentId] 动态ID
+  /// [page] 页码（从0开始）
+  /// [size] 每页数据量
+  Future<ApiResponse<dynamic>> getMomentComments({
+    required int momentId,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      debugPrint('获取动态评论: momentId=$momentId, page=$page, size=$size');
+
+      final response = await _httpManager.get(
+        '/api/moments/$momentId/comments',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+        showLoading: false,
+      );
+
+      debugPrint('评论列表响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('获取评论列表失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 发表评论
+  /// 
+  /// [momentId] 动态ID
+  /// [content] 评论内容
+  /// [replyToId] 回复的评论ID（可选）
+  Future<ApiResponse<dynamic>> postMomentComment({
+    required int momentId,
+    required String content,
+    int? replyToId,
+  }) async {
+    try {
+      debugPrint('发表评论: momentId=$momentId, content=$content, replyToId=$replyToId');
+
+      final data = {
+        'content': content,
+        if (replyToId != null) 'replyToId': replyToId,
+      };
+
+      final response = await _httpManager.post(
+        '/api/moments/$momentId/comments',
+        data: data,
+        showLoading: false,
+      );
+
+      debugPrint('发表评论响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('发表评论失败: $e');
+      rethrow;
+    }
+  }
+
   /// 发布动态
   /// 
   /// [content] 动态内容
