@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
 import 'schedule/schedule_page.dart';
+import 'video/short_video_page.dart';
 import 'package:package_im/services/api_service.dart';
 
 /// 主页（底部导航栏）
@@ -21,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   // 页面列表
   final List<Widget> _pages = const [
     ChatListPage(),
+    ShortVideoPage(),
     FriendListPage(),
     SchedulePage(),
   ];
@@ -78,6 +80,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: '聊天',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle_outline),
+            activeIcon: Icon(Icons.play_circle),
+            label: '视频',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),

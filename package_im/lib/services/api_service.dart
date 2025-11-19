@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../models/login_response.dart';
 import '../models/message.dart';
 import '../models/chat_conversation.dart';
+import '../models/video.dart';
 import '../utils/storage_manager.dart';
 
 /// API服务类
@@ -1004,6 +1005,139 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('处理 WebSocket 消息失败: $e');
+    }
+  }
+
+  // ==================== 短视频相关接口 ====================
+
+  /// 获取短视频列表（推荐）
+  Future<ApiResponse<VideoListResponse>> getVideoList({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      debugPrint('获取短视频列表：page=$page, size=$size');
+      
+      final response = await _httpManager.get(
+        '/api/videos',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+        showLoading: false,
+      );
+
+      if (response.success && response.data != null) {
+        final videoList = VideoListResponse.fromJson(response.data);
+        debugPrint('获取短视频列表成功，共 ${videoList.videos.length} 个视频');
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: videoList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: VideoListResponse(
+            videos: [],
+            totalElements: 0,
+            totalPages: 0,
+            currentPage: 0,
+            pageSize: size,
+            hasNext: false,
+            hasPrevious: false,
+          ),
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取短视频列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 点赞/取消点赞短视频
+  Future<ApiResponse<void>> likeVideo({
+    required int videoId,
+    required bool like,
+  }) async {
+    try {
+      debugPrint('${like ? "点赞" : "取消点赞"}短视频: videoId=$videoId');
+      
+      final response = like
+          ? await _httpManager.post('/api/videos/$videoId/like')
+          : await _httpManager.delete('/api/videos/$videoId/like');
+
+      if (response.success) {
+        debugPrint('${like ? "点赞" : "取消点赞"}成功');
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: null,
+        success: response.success,
+      );
+    } catch (e) {
+      debugPrint('${like ? "点赞" : "取消点赞"}短视频异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 关注/取消关注短视频作者
+  Future<ApiResponse<void>> followVideoAuthor({
+    required int userId,
+    required bool follow,
+  }) async {
+    try {
+      debugPrint('${follow ? "关注" : "取消关注"}用户: userId=$userId');
+      
+      final response = follow
+          ? await _httpManager.post('/api/friends/$userId/follow')
+          : await _httpManager.delete('/api/friends/$userId/follow');
+
+      if (response.success) {
+        debugPrint('${follow ? "关注" : "取消关注"}成功');
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: null,
+        success: response.success,
+      );
+    } catch (e) {
+      debugPrint('${follow ? "关注" : "取消关注"}用户异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 分享短视频
+  Future<ApiResponse<void>> shareVideo({
+    required int videoId,
+  }) async {
+    try {
+      debugPrint('分享短视频: videoId=$videoId');
+      
+      final response = await _httpManager.post(
+        '/api/videos/$videoId/share',
+      );
+
+      if (response.success) {
+        debugPrint('分享成功');
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: null,
+        success: response.success,
+      );
+    } catch (e) {
+      debugPrint('分享短视频异常: $e');
+      rethrow;
     }
   }
 }
