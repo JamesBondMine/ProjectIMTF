@@ -41,39 +41,26 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               elevation: 0,
-              title: const Text(
-                '发现',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              toolbarHeight: 48,
+              flexibleSpace: SafeArea(
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: Colors.white,
+                  indicatorWeight: 3,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white70,
+                  labelStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 16,
+                  ),
+                  tabs: const [
+                    Tab(text: '推荐'),
+                    Tab(text: '关注'),
+                  ],
                 ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search, color: Colors.white),
-                  onPressed: () {
-                    // TODO: 搜索功能
-                  },
-                ),
-              ],
-              bottom: TabBar(
-                controller: _tabController,
-                indicatorColor: Colors.white,
-                indicatorWeight: 3,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                labelStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 16,
-                ),
-                tabs: const [
-                  Tab(text: '推荐'),
-                  Tab(text: '关注'),
-                ],
               ),
             ),
           ];
