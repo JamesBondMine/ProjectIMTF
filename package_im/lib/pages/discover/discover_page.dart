@@ -635,199 +635,246 @@ class _FollowTab extends StatefulWidget {
 }
 
 class _FollowTabState extends State<_FollowTab> {
-  // 模拟关注列表数据
-  final List<Map<String, dynamic>> _followedUsers = [
-    {
-      'id': 1,
-      'name': '张三',
-      'avatar': 'https://picsum.photos/200/200?random=101',
-      'bio': '热爱生活，热爱摄影',
-      'postCount': 128,
-    },
-    {
-      'id': 2,
-      'name': '李四',
-      'avatar': 'https://picsum.photos/200/200?random=102',
-      'bio': '美食博主 | 探店达人',
-      'postCount': 256,
-    },
-    {
-      'id': 3,
-      'name': '王五',
-      'avatar': 'https://picsum.photos/200/200?random=103',
-      'bio': '科技数码爱好者',
-      'postCount': 89,
-    },
-  ];
-
-  // 模拟关注的人的动态
-  final List<Map<String, dynamic>> _followedPosts = [
-    {
-      'id': 1,
-      'user': {
-        'name': '张三',
-        'avatar': 'https://picsum.photos/200/200?random=101',
-      },
-      'content': '今天天气真好，出来散散步～',
-      'images': [
-        'https://picsum.photos/400/300?random=51',
-      ],
-      'likes': 45,
-      'comments': 8,
-      'isLiked': false,
-      'time': '1小时前',
-    },
-    {
-      'id': 2,
-      'user': {
-        'name': '李四',
-        'avatar': 'https://picsum.photos/200/200?random=102',
-      },
-      'content': '新发现的宝藏餐厅，味道超赞！',
-      'images': [
-        'https://picsum.photos/400/300?random=52',
-        'https://picsum.photos/400/300?random=53',
-      ],
-      'likes': 67,
-      'comments': 12,
-      'isLiked': true,
-      'time': '3小时前',
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  
+  List<Moment> _moments = [];
+  int _currentPage = 0;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          // 关注的人列表
-          _buildFollowedUsersSection(),
-          const SizedBox(height: 8),
-          // 关注的人的动态
-          _buildFollowedPostsSection(),
-        ],
-      ),
-    );
+  void initState() {
+    super.initState();
+    _loadMoments();
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() {
-        // 刷新数据
-      });
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 滚动监听，触发加载更多
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasMore) {
+        _loadMore();
+      }
     }
   }
 
-  Widget _buildFollowedUsersSection() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '我的关注',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // TODO: 查看全部关注
-                },
-                child: Text(
-                  '查看全部 ${_followedUsers.length}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 100,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _followedUsers.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final user = _followedUsers[index];
-                return _buildFollowedUserCard(user);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  /// 加载关注的动态列表
+  Future<void> _loadMoments({bool isRefresh = false}) async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+      if (isRefresh) {
+        _currentPage = 0;
+        _hasMore = true;
+      }
+    });
+
+    try {
+      final response = await _apiService.getFollowingMoments(
+        page: _currentPage,
+        size: 10,
+      );
+
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final momentListResponse = MomentListResponse.fromJson(response.data);
+          
+          setState(() {
+            if (isRefresh) {
+              _moments = momentListResponse.moments;
+            } else {
+              _moments.addAll(momentListResponse.moments);
+            }
+            _hasMore = momentListResponse.hasNext;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          if (!isRefresh) {
+            EasyLoading.showError(response.message.isNotEmpty 
+                ? response.message 
+                : '加载失败');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (!isRefresh) {
+          EasyLoading.showError('加载失败: $e');
+        }
+      }
+    }
   }
 
-  Widget _buildFollowedUserCard(Map<String, dynamic> user) {
-    return Container(
-      width: 80,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundImage: CachedNetworkImageProvider(user['avatar']),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            user['name'],
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+  /// 加载更多
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+      _currentPage++;
+    });
+
+    try {
+      final response = await _apiService.getFollowingMoments(
+        page: _currentPage,
+        size: 10,
+      );
+
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final momentListResponse = MomentListResponse.fromJson(response.data);
+          
+          setState(() {
+            _moments.addAll(momentListResponse.moments);
+            _hasMore = momentListResponse.hasNext;
+            _isLoadingMore = false;
+          });
+        } else {
+          setState(() {
+            _currentPage--; // 回退页码
+            _isLoadingMore = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentPage--; // 回退页码
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
-  Widget _buildFollowedPostsSection() {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              '最新动态',
+  /// 下拉刷新
+  Future<void> _onRefresh() async {
+    await _loadMoments(isRefresh: true);
+  }
+
+  /// 处理点赞/取消点赞
+  Future<void> _handleLike(Moment moment) async {
+    final index = _moments.indexWhere((m) => m.id == moment.id);
+    if (index == -1) return;
+
+    final updatedMoment = moment.copyWith(
+      liked: !moment.liked,
+      likeCount: moment.liked ? moment.likeCount - 1 : moment.likeCount + 1,
+    );
+
+    setState(() {
+      _moments[index] = updatedMoment;
+    });
+
+    try {
+      // 调用API
+      if (updatedMoment.liked) {
+        await _apiService.likeMoment(moment.id);
+      } else {
+        await _apiService.unlikeMoment(moment.id);
+      }
+    } catch (e) {
+      // 失败时回滚
+      setState(() {
+        _moments[index] = moment;
+      });
+      EasyLoading.showError('操作失败');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading && _moments.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_moments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 80,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '暂无关注的人的动态',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.grey[600],
               ),
             ),
-          ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _followedPosts.length,
-            itemBuilder: (context, index) {
-              return _buildFollowedPostCard(_followedPosts[index]);
-            },
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              '快去关注一些朋友吧',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[400],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: _moments.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _moments.length) {
+            // 加载更多指示器
+            return Container(
+              padding: const EdgeInsets.all(16),
+              alignment: Alignment.center,
+              child: _isLoadingMore
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      '加载更多...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+            );
+          }
+          return _buildPostCard(_moments[index]);
+        },
       ),
     );
   }
 
-  Widget _buildFollowedPostCard(Map<String, dynamic> post) {
+  Widget _buildPostCard(Moment moment) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        color: Colors.white,
         border: Border(
           bottom: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
@@ -838,26 +885,37 @@ class _FollowTabState extends State<_FollowTab> {
           // 用户信息
           Row(
             children: [
+              // 头像
               CircleAvatar(
-                radius: 20,
-                backgroundImage: CachedNetworkImageProvider(post['user']['avatar']),
+                radius: 22,
+                backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
+                    ? CachedNetworkImageProvider(moment.avatarUrl!)
+                    : null,
+                child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
+                    ? Text(
+                        moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
+                        style: const TextStyle(fontSize: 18),
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
+              // 用户名和时间
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post['user']['name'],
+                      moment.nickname,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      post['time'],
+                      moment.getRelativeTime(),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Colors.grey[600],
                       ),
                     ),
@@ -866,7 +924,10 @@ class _FollowTabState extends State<_FollowTab> {
               ),
               IconButton(
                 icon: const Icon(Icons.more_horiz),
-                onPressed: () {},
+                onPressed: () {
+                  // TODO: 更多选项
+                  EasyLoading.showToast('更多选项开发中');
+                },
                 color: Colors.grey[600],
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -876,34 +937,46 @@ class _FollowTabState extends State<_FollowTab> {
           const SizedBox(height: 12),
           // 内容
           Text(
-            post['content'],
-            style: const TextStyle(fontSize: 14, height: 1.5),
+            moment.content,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.5,
+            ),
           ),
-          if ((post['images'] as List).isNotEmpty) ...[
+          if (moment.mediaUrls.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _buildPostImages(post['images']),
+            // 图片
+            _buildImageGrid(moment.mediaUrls),
           ],
           const SizedBox(height: 12),
           // 互动按钮
           Row(
             children: [
               _buildActionButton(
-                icon: post['isLiked'] ? Icons.favorite : Icons.favorite_border,
-                label: '${post['likes']}',
-                color: post['isLiked'] ? Colors.red : Colors.grey[600],
-                onTap: () {
-                  setState(() {
-                    post['isLiked'] = !post['isLiked'];
-                    post['likes'] += post['isLiked'] ? 1 : -1;
-                  });
-                },
+                icon: moment.liked ? Icons.favorite : Icons.favorite_border,
+                label: '${moment.likeCount}',
+                color: moment.liked ? Colors.red : Colors.grey[600],
+                onTap: () => _handleLike(moment),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
                 icon: Icons.chat_bubble_outline,
-                label: '${post['comments']}',
+                label: '${moment.commentCount}',
                 color: Colors.grey[600],
-                onTap: () {},
+                onTap: () {
+                  // TODO: 查看评论
+                  EasyLoading.showToast('评论功能开发中');
+                },
+              ),
+              const SizedBox(width: 24),
+              _buildActionButton(
+                icon: Icons.share_outlined,
+                label: '分享',
+                color: Colors.grey[600],
+                onTap: () {
+                  // TODO: 分享
+                  EasyLoading.showToast('分享功能开发中');
+                },
               ),
             ],
           ),
@@ -912,13 +985,15 @@ class _FollowTabState extends State<_FollowTab> {
     );
   }
 
-  Widget _buildPostImages(List<String> images) {
+  Widget _buildImageGrid(List<String> images) {
+    if (images.isEmpty) return const SizedBox.shrink();
+
     if (images.length == 1) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: CachedNetworkImage(
           imageUrl: images[0],
-          height: 180,
+          height: 200,
           width: double.infinity,
           fit: BoxFit.cover,
         ),
@@ -929,12 +1004,11 @@ class _FollowTabState extends State<_FollowTab> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 1.5,
+        crossAxisCount: 3,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
       ),
-      itemCount: images.length,
+      itemCount: images.length > 9 ? 9 : images.length,
       itemBuilder: (context, index) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -959,12 +1033,12 @@ class _FollowTabState extends State<_FollowTab> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 20, color: color),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: color,
             ),
           ),
@@ -973,4 +1047,5 @@ class _FollowTabState extends State<_FollowTab> {
     );
   }
 }
+
 

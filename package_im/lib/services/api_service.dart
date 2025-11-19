@@ -322,6 +322,34 @@ class ApiService {
     }
   }
 
+  /// 获取关注的人的动态列表
+  /// 
+  /// [page] 页码（从0开始）
+  /// [size] 每页数据量
+  Future<ApiResponse<dynamic>> getFollowingMoments({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      debugPrint('获取关注动态列表: page=$page, size=$size');
+
+      final response = await _httpManager.get(
+        '/api/moments/following',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+        showLoading: false,
+      );
+
+      debugPrint('关注动态列表响应: $response');
+      return response;
+    } catch (e) {
+      debugPrint('获取关注动态列表失败: $e');
+      rethrow;
+    }
+  }
+
   /// 点赞动态
   /// 
   /// [momentId] 动态ID
