@@ -8,7 +8,6 @@ import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
-import '../friend/add_friend_page.dart';
 import 'chat_page.dart';
 
 /// 聊天列表页面
@@ -249,148 +248,94 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Container(
       padding: EdgeInsets.only(
-        top: statusBarHeight + 16,  // 状态栏高度 + 额外间距
-        left: 20,
-        right: 20,
-        bottom: 20,
+        top: statusBarHeight + 12,
+        left: 16,
+        right: 16,
+        bottom: 16,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        color: Theme.of(context).primaryColor,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
           // 用户头像
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-              ),
-            ),
-            child: user?.avatarUrl != null
-                ? CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.white,
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: user!.avatarUrl!,
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.white,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.white,
-                          child: Center(
-                            child: Text(
-                              user.nickname.isNotEmpty
-                                  ? user.nickname[0].toUpperCase()
-                                  : user.username[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+          user?.avatarUrl != null
+              ? CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white,
+                  child: ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: user!.avatarUrl!,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.white,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor,
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      user?.nickname.isNotEmpty == true
-                          ? user!.nickname[0].toUpperCase()
-                          : user?.username[0].toUpperCase() ?? '?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.white,
+                        child: Center(
+                          child: Text(
+                            user.nickname.isNotEmpty
+                                ? user.nickname[0].toUpperCase()
+                                : user.username[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-          ),
-          const SizedBox(width: 16),
-          // 显示用户账号
+                )
+              : CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    user?.nickname.isNotEmpty == true
+                        ? user!.nickname[0].toUpperCase()
+                        : user?.username[0].toUpperCase() ?? '?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+          const SizedBox(width: 12),
+          // 用户信息
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  user?.nickname.isNotEmpty == true
-                      ? user!.nickname
-                      : user?.username ?? '用户',
+                  '聊天',
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
+                    letterSpacing: 0.5,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (user?.username != null)
-                  Text(
-                    user!.username,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
               ],
-            ),
-          ),
-          // 搜索好友按钮
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.add, color: Colors.white),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddFriendPage(),
-                  ),
-                ).then((_) {
-                  // 从添加好友页面返回后刷新会话列表
-                  _loadConversationList();
-                });
-              },
-              tooltip: '添加好友',
             ),
           ),
         ],

@@ -298,6 +298,14 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           _buildInfoItem(
+            icon: Icons.person_outline,
+            title: '昵称',
+            value: user?.nickname ?? '未设置',
+            onTap: _showEditNicknameDialog,
+            showArrow: true,
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildInfoItem(
             imagePath: 'assets/images/youxiang.png',
             title: '邮箱',
             value: user?.email ?? '未设置',
@@ -385,6 +393,8 @@ class _ProfilePageState extends State<ProfilePage> {
     required String title,
     required String value,
     Color? valueColor,
+    VoidCallback? onTap,
+    bool showArrow = false,
   }) {
     return ListTile(
       leading: imagePath != null
@@ -399,14 +409,24 @@ class _ProfilePageState extends State<ProfilePage> {
         title,
         style: const TextStyle(fontSize: 14),
       ),
-      trailing: Text(
-        value,
-        style: TextStyle(
-          fontSize: 14,
-          color: valueColor ?? Colors.grey[600],
-          fontWeight: FontWeight.w500,
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              color: valueColor ?? Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (showArrow) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+          ],
+        ],
       ),
+      onTap: onTap,
     );
   }
 
@@ -457,6 +477,82 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  /// 显示编辑昵称对话框
+  void _showEditNicknameDialog() {
+    final currentNickname = _apiService.currentUser?.nickname ?? '';
+    final TextEditingController controller = TextEditingController(text: currentNickname);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('修改昵称'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '请输入新昵称',
+            border: OutlineInputBorder(),
+            counterText: '',
+          ),
+          maxLength: 20,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final newNickname = controller.text.trim();
+              Navigator.of(context).pop();
+              if (newNickname.isNotEmpty && newNickname != currentNickname) {
+                _updateNickname(newNickname);
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 更新昵称
+  Future<void> _updateNickname(String newNickname) async {
+    // 验证昵称
+    if (newNickname.isEmpty) {
+      EasyLoading.showError('昵称不能为空');
+      return;
+    }
+    
+    if (newNickname.length > 20) {
+      EasyLoading.showError('昵称长度不能超过20个字符');
+      return;
+    }
+
+    try {
+      EasyLoading.show(status: '更新中...');
+
+      final result = await _apiService.updateUserInfo(
+        nickname: newNickname,
+      );
+
+      if (result.success) {
+        EasyLoading.showSuccess('昵称更新成功');
+        
+        // 刷新UI
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        EasyLoading.showError(
+          result.message.isNotEmpty ? result.message : '昵称更新失败',
+        );
+      }
+    } catch (e) {
+      EasyLoading.showError('更新失败: $e');
+    }
   }
 
   /// 显示头像选项

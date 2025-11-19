@@ -21,9 +21,9 @@ void _configLoading() {
     ..loadingStyle = EasyLoadingStyle.custom
     ..indicatorSize = 45.0
     ..radius = 10.0
-    ..progressColor = const Color(0xFF07C160)
+    ..progressColor = const Color(0xFF1976D2)
     ..backgroundColor = Colors.white
-    ..indicatorColor = const Color(0xFF07C160)
+    ..indicatorColor = const Color(0xFF1976D2)
     ..textColor = Colors.black87
     ..maskColor = Colors.black.withOpacity(0.5)
     ..userInteractions = false
@@ -40,14 +40,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF07C160), // 微信绿
-          primary: const Color(0xFF07C160),
+          seedColor: const Color(0xFF1976D2), // 深蓝色主题
+          primary: const Color(0xFF1976D2),
         ),
         useMaterial3: true,
         // 自定义主题色
-        primaryColor: const Color(0xFF07C160),
+        primaryColor: const Color(0xFF1976D2),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF07C160),
+          backgroundColor: Color(0xFF1976D2),
           foregroundColor: Colors.white,
         ),
       ),
