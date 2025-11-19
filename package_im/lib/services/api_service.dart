@@ -866,12 +866,22 @@ class ApiService {
         List<User> followingList = [];
         
         // 解析关注列表
-        if (response.data is List) {
+        // 实际返回格式: { code: 0, msg: "success", data: { friends: [...], totalCount: 1 } }
+        if (response.data is Map) {
+          if (response.data['friends'] is List) {
+            // 格式: data: { friends: [...] }
+            followingList = (response.data['friends'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          } else if (response.data['users'] is List) {
+            // 备用格式: data: { users: [...] }
+            followingList = (response.data['users'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          }
+        } else if (response.data is List) {
+          // 直接是数组格式
           followingList = (response.data as List)
-              .map((item) => User.fromJson(item))
-              .toList();
-        } else if (response.data is Map && response.data['users'] is List) {
-          followingList = (response.data['users'] as List)
               .map((item) => User.fromJson(item))
               .toList();
         }
@@ -898,6 +908,48 @@ class ApiService {
     }
   }
 
+  /// 获取我的关注数量
+  Future<ApiResponse<int>> getFollowingCount() async {
+    try {
+      debugPrint('获取关注数量');
+      
+      final response = await _httpManager.get(
+        '/api/friends/following/count',
+        showLoading: false,
+      );
+      
+      if (response.success && response.data != null) {
+        int count = 0;
+        
+        // 解析数量：data 直接是数字
+        if (response.data is int) {
+          count = response.data;
+        } else if (response.data is String) {
+          count = int.tryParse(response.data) ?? 0;
+        }
+        
+        debugPrint('获取关注数量成功: $count 人');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: count,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: 0,
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取关注数量异常: $e');
+      rethrow;
+    }
+  }
+
   /// 获取我的粉丝列表
   Future<ApiResponse<List<User>>> getFollowersList() async {
     try {
@@ -912,12 +964,22 @@ class ApiService {
         List<User> followersList = [];
         
         // 解析粉丝列表
-        if (response.data is List) {
+        // 实际返回格式: { code: 0, msg: "success", data: { friends: [...], totalCount: 1 } }
+        if (response.data is Map) {
+          if (response.data['friends'] is List) {
+            // 格式: data: { friends: [...] }
+            followersList = (response.data['friends'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          } else if (response.data['users'] is List) {
+            // 备用格式: data: { users: [...] }
+            followersList = (response.data['users'] as List)
+                .map((item) => User.fromJson(item))
+                .toList();
+          }
+        } else if (response.data is List) {
+          // 直接是数组格式
           followersList = (response.data as List)
-              .map((item) => User.fromJson(item))
-              .toList();
-        } else if (response.data is Map && response.data['users'] is List) {
-          followersList = (response.data['users'] as List)
               .map((item) => User.fromJson(item))
               .toList();
         }
@@ -940,6 +1002,48 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('获取粉丝列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取我的粉丝数量
+  Future<ApiResponse<int>> getFollowersCount() async {
+    try {
+      debugPrint('获取粉丝数量');
+      
+      final response = await _httpManager.get(
+        '/api/friends/followers/count',
+        showLoading: false,
+      );
+      
+      if (response.success && response.data != null) {
+        int count = 0;
+        
+        // 解析数量：data 直接是数字
+        if (response.data is int) {
+          count = response.data;
+        } else if (response.data is String) {
+          count = int.tryParse(response.data) ?? 0;
+        }
+        
+        debugPrint('获取粉丝数量成功: $count 人');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: count,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: 0,
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取粉丝数量异常: $e');
       rethrow;
     }
   }

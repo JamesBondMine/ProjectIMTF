@@ -34,13 +34,14 @@ class _ProfilePageState extends State<ProfilePage> {
   /// 加载关注和粉丝数量
   Future<void> _loadCounts() async {
     try {
-      final followingResponse = await _apiService.getFollowingList();
-      final followersResponse = await _apiService.getFollowersList();
+      // 使用专门的 count API 更高效
+      final followingResponse = await _apiService.getFollowingCount();
+      final followersResponse = await _apiService.getFollowersCount();
       
       if (mounted) {
         setState(() {
-          _followingCount = followingResponse.data?.length ?? 0;
-          _followersCount = followersResponse.data?.length ?? 0;
+          _followingCount = followingResponse.data ?? 0;
+          _followersCount = followersResponse.data ?? 0;
         });
       }
     } catch (e) {
