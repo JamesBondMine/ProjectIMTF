@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/moment.dart';
+import '../../models/user.dart';
 import '../../services/api_service.dart';
 import 'publish_moment_page.dart';
 import 'moment_comments_page.dart';
+import '../friend/friend_detail_page.dart';
 
 /// 发现页面
 class DiscoverPage extends StatefulWidget {
@@ -209,6 +211,30 @@ class _RecommendTabState extends State<_RecommendTab> {
   bool _isLoading = false;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  
+  /// 跳转到用户详情页面
+  void _navigateToUserDetail(Moment moment) {
+    // 将 Moment 的用户信息转换为 User 对象
+    final user = User(
+      id: moment.userId,
+      username: moment.username,
+      nickname: moment.nickname,
+      email: '',
+      avatarUrl: moment.avatarUrl,
+      userType: 'NORMAL',
+      status: 'ACTIVE',
+      isGuest: false,
+      createdAt: moment.createdAt.toIso8601String(),
+      updatedAt: moment.updatedAt.toIso8601String(),
+      isFriend: moment.isFriend,
+    );
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FriendDetailPage(friend: user),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -398,65 +424,71 @@ class _RecommendTabState extends State<_RecommendTab> {
   }
 
   Widget _buildPostCard(Moment moment) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+    return GestureDetector(
+      onTap: () => _navigateToComments(moment),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 用户信息
-          Row(
-            children: [
-              // 头像
-              CircleAvatar(
-                radius: 22,
-                backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(moment.avatarUrl!)
-                    : null,
-                child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
-                    ? Text(
-                        moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
-                        style: const TextStyle(fontSize: 18),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              // 用户名和时间
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      moment.nickname,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      moment.getRelativeTime(),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 用户信息
+            Row(
+              children: [
+                // 头像
+                GestureDetector(
+                  onTap: () => _navigateToUserDetail(moment),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
+                        ? CachedNetworkImageProvider(moment.avatarUrl!)
+                        : null,
+                    child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
+                        ? Text(
+                            moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
+                            style: const TextStyle(fontSize: 18),
+                          )
+                        : null,
+                  ),
                 ),
-              ),
-              // 关注按钮（仅非好友显示）
-              if (!moment.isFriend)
-                TextButton(
-                  onPressed: () {
-                    // TODO: 关注功能
-                    EasyLoading.showToast('关注功能开发中');
-                  },
+                const SizedBox(width: 12),
+                // 用户名和时间
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        moment.nickname,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        moment.getRelativeTime(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 关注按钮（仅非好友显示）
+                if (!moment.isFriend)
+                  TextButton(
+                    onPressed: () {
+                      // TODO: 关注功能
+                      EasyLoading.showToast('关注功能开发中');
+                    },
                   style: TextButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
@@ -507,6 +539,7 @@ class _RecommendTabState extends State<_RecommendTab> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -642,6 +675,30 @@ class _FollowTabState extends State<_FollowTab> {
     super.initState();
     _loadMoments();
     _scrollController.addListener(_onScroll);
+  }
+  
+  /// 跳转到用户详情页面
+  void _navigateToUserDetail(Moment moment) {
+    // 将 Moment 的用户信息转换为 User 对象
+    final user = User(
+      id: moment.userId,
+      username: moment.username,
+      nickname: moment.nickname,
+      email: '',
+      avatarUrl: moment.avatarUrl,
+      userType: 'NORMAL',
+      status: 'ACTIVE',
+      isGuest: false,
+      createdAt: moment.createdAt.toIso8601String(),
+      updatedAt: moment.updatedAt.toIso8601String(),
+      isFriend: moment.isFriend,
+    );
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FriendDetailPage(friend: user),
+      ),
+    );
   }
 
   @override
@@ -877,64 +934,70 @@ class _FollowTabState extends State<_FollowTab> {
   }
 
   Widget _buildPostCard(Moment moment) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+    return GestureDetector(
+      onTap: () => _navigateToComments(moment),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 用户信息
-          Row(
-            children: [
-              // 头像
-              CircleAvatar(
-                radius: 22,
-                backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(moment.avatarUrl!)
-                    : null,
-                child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
-                    ? Text(
-                        moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
-                        style: const TextStyle(fontSize: 18),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              // 用户名和时间
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      moment.nickname,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      moment.getRelativeTime(),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 用户信息
+            Row(
+              children: [
+                // 头像
+                GestureDetector(
+                  onTap: () => _navigateToUserDetail(moment),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundImage: moment.avatarUrl != null && moment.avatarUrl!.isNotEmpty
+                        ? CachedNetworkImageProvider(moment.avatarUrl!)
+                        : null,
+                    child: moment.avatarUrl == null || moment.avatarUrl!.isEmpty
+                        ? Text(
+                            moment.nickname.isNotEmpty ? moment.nickname[0] : '?',
+                            style: const TextStyle(fontSize: 18),
+                          )
+                        : null,
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.more_horiz),
-                onPressed: () {
-                  // TODO: 更多选项
-                  EasyLoading.showToast('更多选项开发中');
-                },
+                const SizedBox(width: 12),
+                // 用户名和时间
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        moment.nickname,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        moment.getRelativeTime(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () {
+                    // TODO: 更多选项
+                    EasyLoading.showToast('更多选项开发中');
+                  },
                 color: Colors.grey[600],
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -986,6 +1049,7 @@ class _FollowTabState extends State<_FollowTab> {
           ),
         ],
       ),
+    ),
     );
   }
 
