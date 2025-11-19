@@ -30,6 +30,8 @@ class _MomentCommentsPageState extends State<MomentCommentsPage> {
   bool _hasMore = true;
   bool _isLoadingMore = false;
   bool _isSubmitting = false;
+  bool _hasNewComment = false; // 标记是否有新评论
+  int? _newCommentId; // 新发表的评论ID
 
   // 回复相关
   Comment? _replyToComment;
@@ -182,18 +184,40 @@ class _MomentCommentsPageState extends State<MomentCommentsPage> {
       );
 
       if (mounted) {
-        if (response.success) {
+        if (response.success && response.data != null) {
           EasyLoading.showSuccess('评论成功');
+          
+          // 解析返回的评论数据
+          final newComment = Comment.fromJson(response.data);
+          
+          // 将新评论添加到列表顶部
+          setState(() {
+            _comments.insert(0, newComment);
+            _hasNewComment = true; // 标记有新评论
+            _newCommentId = newComment.id; // 记录新评论ID
+          });
+          
+          // 3秒后取消高亮
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _newCommentId = null;
+              });
+            }
+          });
+          
+          // 清空输入框和回复状态
           _commentController.clear();
           _replyToComment = null;
           _commentFocusNode.unfocus();
-
-          // 刷新评论列表
-          await _loadComments(isRefresh: true);
-
-          // 通知上一页更新评论数
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context, true);
+          
+          // 滚动到顶部显示新评论
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
           }
         } else {
           EasyLoading.showError(
@@ -230,19 +254,86 @@ class _MomentCommentsPageState extends State<MomentCommentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('评论 ${widget.moment.commentCount}'),
-        backgroundColor: Theme.of(context).primaryColor,
+    return WillPopScope(
+      onWillPop: () async {
+        // 返回时通知上一页是否需要刷新
+        Navigator.of(context).pop(_hasNewComment);
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('评论 ${_comments.isEmpty ? widget.moment.commentCount : _comments.length}'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: Column(
+          children: [
+            // 动态内容预览
+            _buildMomentPreview(),
+            Divider(height: 1, color: Colors.grey[300]),
+            // 评论列表
+            Expanded(
+              child: _buildCommentList(),
+            ),
+            // 评论输入框
+            _buildCommentInput(),
+          ],
+        ),
       ),
-      body: Column(
+    );
+  }
+
+  /// 构建动态预览
+  Widget _buildMomentPreview() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.grey[50],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 评论列表
-          Expanded(
-            child: _buildCommentList(),
+          // 头像
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: widget.moment.avatarUrl != null &&
+                    widget.moment.avatarUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(widget.moment.avatarUrl!)
+                : null,
+            child: widget.moment.avatarUrl == null ||
+                    widget.moment.avatarUrl!.isEmpty
+                ? Text(
+                    widget.moment.nickname.isNotEmpty
+                        ? widget.moment.nickname[0]
+                        : '?',
+                    style: const TextStyle(fontSize: 16),
+                  )
+                : null,
           ),
-          // 评论输入框
-          _buildCommentInput(),
+          const SizedBox(width: 12),
+          // 用户名和内容
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.moment.nickname,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.moment.content,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -319,8 +410,21 @@ class _MomentCommentsPageState extends State<MomentCommentsPage> {
   }
 
   Widget _buildCommentItem(Comment comment) {
+    final isNewComment = comment.id == _newCommentId;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
+      padding: isNewComment ? const EdgeInsets.all(8) : EdgeInsets.zero,
+      decoration: isNewComment
+          ? BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                width: 1,
+              ),
+            )
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

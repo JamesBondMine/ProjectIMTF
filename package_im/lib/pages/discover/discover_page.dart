@@ -502,27 +502,7 @@ class _RecommendTabState extends State<_RecommendTab> {
                 color: Colors.grey[600],
                 onTap: () => _navigateToComments(moment),
               ),
-              const SizedBox(width: 24),
-              _buildActionButton(
-                icon: Icons.share_outlined,
-                label: '分享',
-                color: Colors.grey[600],
-                onTap: () {
-                  // TODO: 分享
-                  EasyLoading.showToast('分享功能开发中');
-                },
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.more_horiz),
-                onPressed: () {
-                  // TODO: 更多选项
-                  EasyLoading.showToast('更多选项开发中');
-                },
-                color: Colors.grey[600],
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+      
             ],
           ),
         ],
