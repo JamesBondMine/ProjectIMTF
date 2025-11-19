@@ -7,6 +7,8 @@ import '../../services/api_service.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
 import 'feedback_page.dart';
+import 'my_following_page.dart';
+import 'my_followers_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
@@ -19,6 +21,32 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _apiService = ApiService();
   final _imagePicker = ImagePicker();
+  
+  int _followingCount = 0;
+  int _followersCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounts();
+  }
+
+  /// 加载关注和粉丝数量
+  Future<void> _loadCounts() async {
+    try {
+      final followingResponse = await _apiService.getFollowingList();
+      final followersResponse = await _apiService.getFollowersList();
+      
+      if (mounted) {
+        setState(() {
+          _followingCount = followingResponse.data?.length ?? 0;
+          _followersCount = followersResponse.data?.length ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint('加载关注粉丝数量失败: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +140,9 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 16),
+            // 关注和粉丝统计
+            _buildStatsSection(),
+            const SizedBox(height: 16),
             // 信息列表
             _buildInfoSection(),
             const SizedBox(height: 16),
@@ -145,6 +176,102 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 统计区域
+  Widget _buildStatsSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatItem(
+              count: _followingCount,
+              label: '关注',
+              onTap: () async {
+                // 跳转到我的关注页面
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MyFollowingPage(),
+                  ),
+                );
+                // 返回时刷新数据
+                _loadCounts();
+              },
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 40,
+            color: Colors.grey[200],
+          ),
+          Expanded(
+            child: _buildStatItem(
+              count: _followersCount,
+              label: '粉丝',
+              onTap: () async {
+                // 跳转到我的粉丝页面
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MyFollowersPage(),
+                  ),
+                );
+                // 返回时刷新数据
+                _loadCounts();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 统计项
+  Widget _buildStatItem({
+    required int count,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            children: [
+              Text(
+                count.toString(),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

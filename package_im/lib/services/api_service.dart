@@ -852,6 +852,98 @@ class ApiService {
     }
   }
 
+  /// 获取我关注的用户列表
+  Future<ApiResponse<List<User>>> getFollowingList() async {
+    try {
+      debugPrint('获取关注列表');
+      
+      final response = await _httpManager.get(
+        '/api/friends/following',
+        showLoading: false,
+      );
+      
+      if (response.success && response.data != null) {
+        List<User> followingList = [];
+        
+        // 解析关注列表
+        if (response.data is List) {
+          followingList = (response.data as List)
+              .map((item) => User.fromJson(item))
+              .toList();
+        } else if (response.data is Map && response.data['users'] is List) {
+          followingList = (response.data['users'] as List)
+              .map((item) => User.fromJson(item))
+              .toList();
+        }
+        
+        debugPrint('获取关注列表成功，共 ${followingList.length} 人');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: followingList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: [],
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取关注列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取我的粉丝列表
+  Future<ApiResponse<List<User>>> getFollowersList() async {
+    try {
+      debugPrint('获取粉丝列表');
+      
+      final response = await _httpManager.get(
+        '/api/friends/followers',
+        showLoading: false,
+      );
+      
+      if (response.success && response.data != null) {
+        List<User> followersList = [];
+        
+        // 解析粉丝列表
+        if (response.data is List) {
+          followersList = (response.data as List)
+              .map((item) => User.fromJson(item))
+              .toList();
+        } else if (response.data is Map && response.data['users'] is List) {
+          followersList = (response.data['users'] as List)
+              .map((item) => User.fromJson(item))
+              .toList();
+        }
+        
+        debugPrint('获取粉丝列表成功，共 ${followersList.length} 人');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: followersList,
+          success: true,
+        );
+      } else {
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: [],
+          success: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('获取粉丝列表异常: $e');
+      rethrow;
+    }
+  }
+
   /// 发送消息
   Future<ApiResponse<Message>> sendMessage({
     required int receiverId,
