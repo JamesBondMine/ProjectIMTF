@@ -26,6 +26,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _isInitialized = false;
   bool _hasError = false;
   String? _errorMessage;
+  bool _isBuffering = false;
 
   @override
   void initState() {
@@ -62,11 +63,19 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isInitialized = false;
         _hasError = false;
         _errorMessage = null;
+        _isBuffering = true;
       });
 
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(widget.video.videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true, // 允许与其他音频混合
+          allowBackgroundPlayback: false,
+        ),
       );
+
+      // 监听缓冲状态
+      _videoController!.addListener(_videoListener);
 
       await _videoController!.initialize();
 
@@ -84,9 +93,21 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             : null,
       );
 
+      // 如果需要播放，先预加载视频
+      if (widget.isPlaying) {
+        // 静音预加载，让视频开始缓冲
+        await _videoController!.setVolume(0);
+        await _videoController!.play();
+        // 等待一小段时间让视频缓冲
+        await Future.delayed(const Duration(milliseconds: 100));
+        // 恢复音量
+        await _videoController!.setVolume(1.0);
+      }
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
+          _isBuffering = false;
         });
       }
     } catch (e) {
@@ -95,12 +116,26 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         setState(() {
           _hasError = true;
           _errorMessage = '视频加载失败';
+          _isBuffering = false;
         });
       }
     }
   }
 
+  /// 视频状态监听器
+  void _videoListener() {
+    if (_videoController == null) return;
+    
+    final isBuffering = _videoController!.value.isBuffering;
+    if (_isBuffering != isBuffering && mounted) {
+      setState(() {
+        _isBuffering = isBuffering;
+      });
+    }
+  }
+
   void _disposeControllers() {
+    _videoController?.removeListener(_videoListener);
     _chewieController?.dispose();
     _videoController?.dispose();
     _chewieController = null;
@@ -143,10 +178,41 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             else
               _buildLoadingWidget(),
 
+            // 缓冲指示器
+            if (_isInitialized && _isBuffering)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '缓冲中...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // 暂停图标
             if (_isInitialized &&
                 _videoController != null &&
-                !_videoController!.value.isPlaying)
+                !_videoController!.value.isPlaying &&
+                !_isBuffering)
               Center(
                 child: Container(
                   width: 80,

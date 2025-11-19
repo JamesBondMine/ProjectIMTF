@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/video.dart';
 import '../../services/api_service.dart';
 import 'video_player_widget.dart';
+import 'publish_video_page.dart';
 
 /// 短视频页面（抖音风格）
 class ShortVideoPage extends StatefulWidget {
@@ -64,12 +65,19 @@ class _ShortVideoPageState extends State<ShortVideoPage>
         setState(() {
           if (refresh) {
             _videos = response.data!.videos;
+            // 刷新时重置当前索引
+            _currentIndex = 0;
           } else {
             _videos.addAll(response.data!.videos);
           }
           _hasMore = response.data!.hasNext;
           _currentPage++;
         });
+        
+        // 如果是第一次加载且有视频，预加载前3个视频的信息
+        if (_videos.isNotEmpty && _currentPage == 1) {
+          debugPrint('已加载 ${_videos.length} 个视频，准备播放第一个视频');
+        }
       } else {
         if (response.message.isNotEmpty) {
           EasyLoading.showError(response.message);
@@ -216,6 +224,9 @@ class _ShortVideoPageState extends State<ShortVideoPage>
 
           // 顶部状态栏区域
           _buildTopBar(),
+          
+          // 发布按钮
+          _buildPublishButton(),
         ],
       ),
     );
@@ -477,6 +488,58 @@ class _ShortVideoPageState extends State<ShortVideoPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 发布按钮
+  Widget _buildPublishButton() {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
+    return Positioned(
+      top: statusBarHeight + 10,
+      right: 16,
+      child: GestureDetector(
+        onTap: () async {
+          // 跳转到发布页面
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const PublishVideoPage(),
+            ),
+          );
+
+          // 如果发布成功，刷新视频列表
+          if (result == true) {
+            _loadVideos(refresh: true);
+          }
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).primaryColor,
+                Theme.of(context).primaryColor.withOpacity(0.7),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).primaryColor.withOpacity(0.5),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
       ),
     );
   }

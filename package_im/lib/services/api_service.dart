@@ -1010,17 +1010,20 @@ class ApiService {
 
   // ==================== 短视频相关接口 ====================
 
-  /// 获取短视频列表（推荐）
+  /// 获取短视频列表（从动态接口获取）
+  /// 
+  /// 调用 /api/moments 接口，category 参数为 SHORT_VIDEO
   Future<ApiResponse<VideoListResponse>> getVideoList({
     int page = 0,
     int size = 10,
   }) async {
     try {
-      debugPrint('获取短视频列表：page=$page, size=$size');
+      debugPrint('获取短视频列表：page=$page, size=$size, category=SHORT_VIDEO');
       
       final response = await _httpManager.get(
-        '/api/videos',
+        '/api/moments',
         queryParameters: {
+          'category': 'SHORT_VIDEO',  // 只获取短视频类型的动态
           'page': page,
           'size': size,
         },
@@ -1028,7 +1031,24 @@ class ApiService {
       );
 
       if (response.success && response.data != null) {
-        final videoList = VideoListResponse.fromJson(response.data);
+        // 解析返回的 moments 数据为 Video 对象
+        List<Video> videos = [];
+        if (response.data['moments'] is List) {
+          videos = (response.data['moments'] as List)
+              .map((item) => _convertMomentToVideo(item))
+              .toList();
+        }
+        
+        final videoList = VideoListResponse(
+          videos: videos,
+          totalElements: response.data['totalElements'] ?? 0,
+          totalPages: response.data['totalPages'] ?? 0,
+          currentPage: response.data['currentPage'] ?? 0,
+          pageSize: response.data['pageSize'] ?? size,
+          hasNext: response.data['hasNext'] ?? false,
+          hasPrevious: response.data['hasPrevious'] ?? false,
+        );
+        
         debugPrint('获取短视频列表成功，共 ${videoList.videos.length} 个视频');
         return ApiResponse(
           code: response.code,
@@ -1058,17 +1078,62 @@ class ApiService {
     }
   }
 
-  /// 点赞/取消点赞短视频
+  /// 将 Moment 数据转换为 Video 对象
+  Video _convertMomentToVideo(Map<String, dynamic> momentData) {
+    // 从 content 中提取标题和描述（如果包含换行符，第一行为标题，其余为描述）
+    String content = momentData['content'] ?? '';
+    String title = content;
+    String description = content;
+    
+    if (content.contains('\n')) {
+      final lines = content.split('\n');
+      title = lines[0];
+      description = lines.sublist(1).join('\n');
+    }
+    
+    // 获取视频 URL（取第一个媒体URL）
+    String videoUrl = '';
+    if (momentData['mediaUrls'] is List && (momentData['mediaUrls'] as List).isNotEmpty) {
+      videoUrl = momentData['mediaUrls'][0] ?? '';
+    }
+    
+    return Video(
+      id: momentData['id'] ?? 0,
+      userId: momentData['userId'] ?? 0,
+      username: momentData['username'] ?? '',
+      nickname: momentData['nickname'] ?? '',
+      avatarUrl: momentData['avatarUrl'],
+      videoUrl: videoUrl,
+      coverUrl: null, // moments 接口没有封面字段
+      title: title,
+      description: description,
+      likeCount: momentData['likeCount'] ?? 0,
+      commentCount: momentData['commentCount'] ?? 0,
+      shareCount: 0, // moments 接口没有分享数字段，默认为0
+      isLiked: momentData['liked'] ?? false,
+      isFollowing: momentData['isFollowing'] ?? false,
+      createdAt: momentData['createdAt'] != null
+          ? DateTime.parse(momentData['createdAt'])
+          : DateTime.now(),
+      updatedAt: momentData['updatedAt'] != null
+          ? DateTime.parse(momentData['updatedAt'])
+          : DateTime.now(),
+    );
+  }
+
+  /// 点赞/取消点赞短视频（实际调用动态点赞接口）
+  /// 
+  /// videoId 实际上是 momentId
   Future<ApiResponse<void>> likeVideo({
     required int videoId,
     required bool like,
   }) async {
     try {
-      debugPrint('${like ? "点赞" : "取消点赞"}短视频: videoId=$videoId');
+      debugPrint('${like ? "点赞" : "取消点赞"}短视频: momentId=$videoId');
       
       final response = like
-          ? await _httpManager.post('/api/videos/$videoId/like')
-          : await _httpManager.delete('/api/videos/$videoId/like');
+          ? await _httpManager.post('/api/moments/$videoId/like')
+          : await _httpManager.delete('/api/moments/$videoId/like');
 
       if (response.success) {
         debugPrint('${like ? "点赞" : "取消点赞"}成功');
@@ -1114,15 +1179,17 @@ class ApiService {
     }
   }
 
-  /// 分享短视频
+  /// 分享短视频（实际调用动态分享接口）
+  /// 
+  /// videoId 实际上是 momentId
   Future<ApiResponse<void>> shareVideo({
     required int videoId,
   }) async {
     try {
-      debugPrint('分享短视频: videoId=$videoId');
+      debugPrint('分享短视频: momentId=$videoId');
       
       final response = await _httpManager.post(
-        '/api/videos/$videoId/share',
+        '/api/moments/$videoId/share',
       );
 
       if (response.success) {
@@ -1137,6 +1204,113 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('分享短视频异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 发布动态（支持图片、视频等）
+  /// 
+  /// [content] 动态内容
+  /// [mediaType] 媒体类型：IMAGE、VIDEO 等
+  /// [category] 动态分类，支持以下类型：
+  ///   - IMAGE_TEXT：图文
+  ///   - SHORT_VIDEO：短视频
+  ///   - ARTICLE：文章
+  ///   - LIFE：生活
+  ///   - TRAVEL：旅行
+  ///   - FOOD：美食
+  ///   - FASHION：时尚
+  ///   - TECH：科技
+  ///   - SPORTS：运动
+  ///   - OTHER：其他
+  /// [mediaUrls] 媒体文件URL列表
+  Future<ApiResponse<Map<String, dynamic>>> publishMoment({
+    required String content,
+    required String mediaType,
+    required String category,
+    required List<String> mediaUrls,
+  }) async {
+    try {
+      debugPrint('发布动态: content=$content, mediaType=$mediaType, category=$category');
+      
+      final response = await _httpManager.post(
+        '/api/moments',
+        data: {
+          'content': content,
+          'mediaType': mediaType,
+          'category': category,
+          'mediaUrls': mediaUrls,
+        },
+      );
+
+      if (response.success) {
+        debugPrint('动态发布成功');
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: response.data,
+        success: response.success,
+      );
+    } catch (e) {
+      debugPrint('发布动态异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 发布短视频（两步：先上传文件，再发布动态）
+  /// 
+  /// 流程：
+  /// 1. 上传视频文件到 /api/files/upload/single，获取视频URL
+  /// 2. 调用 publishMoment 发布动态，category 使用 SHORT_VIDEO
+  /// 
+  /// [videoFile] 视频文件
+  /// [title] 视频标题
+  /// [description] 视频描述
+  Future<ApiResponse<Map<String, dynamic>>> publishVideo({
+    required File videoFile,
+    required String title,
+    required String description,
+  }) async {
+    try {
+      debugPrint('开始发布短视频: title=$title');
+      
+      // 第一步：上传视频文件
+      debugPrint('步骤1: 上传视频文件...');
+      final uploadResponse = await uploadSingleFile(videoFile.path);
+      
+      if (!uploadResponse.success || uploadResponse.data == null || uploadResponse.data!.isEmpty) {
+        debugPrint('视频上传失败');
+        return ApiResponse(
+          code: uploadResponse.code,
+          message: uploadResponse.message.isNotEmpty ? uploadResponse.message : '视频上传失败',
+          data: null,
+          success: false,
+        );
+      }
+      
+      final videoUrl = uploadResponse.data!;
+      debugPrint('视频上传成功，URL: $videoUrl');
+      
+      // 第二步：发布视频动态
+      debugPrint('步骤2: 发布视频动态...');
+      final publishResponse = await publishMoment(
+        content: '$title\n$description',
+        mediaType: 'VIDEO',
+        category: 'SHORT_VIDEO',  // 短视频类别使用 SHORT_VIDEO
+        mediaUrls: [videoUrl],
+      );
+
+      if (publishResponse.success) {
+        debugPrint('✅ 视频动态发布成功');
+      } else {
+        debugPrint('❌ 视频动态发布失败: code=${publishResponse.code}, message=${publishResponse.message}');
+      }
+      
+      return publishResponse;
+    } catch (e) {
+      debugPrint('发布短视频异常: $e');
       rethrow;
     }
   }
