@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import 'publish_moment_page.dart';
 import 'moment_comments_page.dart';
 import '../friend/friend_detail_page.dart';
+import '../profile/feedback_page.dart';
 
 /// 发现页面
 class DiscoverPage extends StatefulWidget {
@@ -489,17 +490,25 @@ class _RecommendTabState extends State<_RecommendTab> {
                       // TODO: 关注功能
                       EasyLoading.showToast('关注功能开发中');
                     },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    style: TextButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      '关注',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ),
-                  child: const Text(
-                    '关注',
-                    style: TextStyle(fontSize: 13),
-                  ),
+                // 更多选项按钮
+                IconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () => _showMomentOptions(moment),
+                  color: Colors.grey[600],
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
             ],
           ),
@@ -587,6 +596,85 @@ class _RecommendTabState extends State<_RecommendTab> {
       // TODO: 可以选择刷新整个列表或只更新该动态的评论数
       _loadMoments(isRefresh: true);
     }
+  }
+
+  /// 显示动态选项
+  void _showMomentOptions(Moment moment) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.report_outlined, color: Colors.red, size: 24),
+                  ),
+                  title: const Text(
+                    '举报',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    '举报不当内容',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // 跳转到投诉建议页面，初始类型设为'投诉'
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const FeedbackPage(initialType: '投诉'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.close, color: Colors.grey[700], size: 24),
+                  ),
+                  title: Text(
+                    '取消',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                  onTap: () => Navigator.pop(context),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildImageGrid(List<String> images) {
@@ -861,6 +949,85 @@ class _FollowTabState extends State<_FollowTab> {
     }
   }
 
+  /// 显示动态选项
+  void _showMomentOptions(Moment moment) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.report_outlined, color: Colors.red, size: 24),
+                  ),
+                  title: const Text(
+                    '举报',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    '举报不当内容',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // 跳转到投诉建议页面，初始类型设为'投诉'
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const FeedbackPage(initialType: '投诉'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.close, color: Colors.grey[700], size: 24),
+                  ),
+                  title: Text(
+                    '取消',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                  onTap: () => Navigator.pop(context),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _moments.isEmpty) {
@@ -994,14 +1161,11 @@ class _FollowTabState extends State<_FollowTab> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.more_horiz),
-                  onPressed: () {
-                    // TODO: 更多选项
-                    EasyLoading.showToast('更多选项开发中');
-                  },
-                color: Colors.grey[600],
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+                  onPressed: () => _showMomentOptions(moment),
+                  color: Colors.grey[600],
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
           const SizedBox(height: 12),

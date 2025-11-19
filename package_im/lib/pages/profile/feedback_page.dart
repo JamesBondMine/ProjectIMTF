@@ -6,7 +6,9 @@ import '../../services/api_service.dart';
 
 /// 投诉建议页面
 class FeedbackPage extends StatefulWidget {
-  const FeedbackPage({super.key});
+  final String? initialType; // 初始类型：'建议' 或 '投诉'
+  
+  const FeedbackPage({super.key, this.initialType});
 
   @override
   State<FeedbackPage> createState() => _FeedbackPageState();
@@ -18,10 +20,17 @@ class _FeedbackPageState extends State<FeedbackPage> {
   final _imagePicker = ImagePicker();
   final _apiService = ApiService();
   
-  String _selectedType = '建议';
+  late String _selectedType;
   bool _isSubmitting = false;
   File? _selectedImage;  // 选中的图片文件
   String? _imageUrl;     // 上传后的图片URL
+  
+  @override
+  void initState() {
+    super.initState();
+    // 使用传入的初始类型，如果没有则默认为'建议'
+    _selectedType = widget.initialType ?? '建议';
+  }
 
   @override
   void dispose() {
