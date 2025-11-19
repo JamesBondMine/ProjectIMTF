@@ -67,7 +67,7 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
   /// 加载侧边面板设置
   Future<void> _loadDrawerSetting() async {
     final prefs = await SharedPreferences.getInstance();
-    final autoOpen = prefs.getBool('auto_open_drawer') ?? true;  // 默认为 true
+    final autoOpen = prefs.getBool('auto_open_drawer') ?? false;  // 默认为 false（关闭）
     
     setState(() {
       _isDrawerOpen = autoOpen;

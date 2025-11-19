@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
-import 'schedule/schedule_page.dart';
 import 'video/short_video_page.dart';
 import 'package:package_im/services/api_service.dart';
 
@@ -24,7 +23,6 @@ class _HomePageState extends State<HomePage> {
     ChatListPage(),
     ShortVideoPage(),
     FriendListPage(),
-    SchedulePage(),
   ];
 
   @override
@@ -90,11 +88,6 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
             label: '好友',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            activeIcon: Icon(Icons.event_note),
-            label: '日程',
           ),
         ],
       ),
