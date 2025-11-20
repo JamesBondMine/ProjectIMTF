@@ -80,8 +80,8 @@ class VideoShareHelper {
             // 节流：每200ms更新一次进度，避免闪烁
             final now = DateTime.now().millisecondsSinceEpoch;
             if (now - _lastProgressUpdate > 200) {
-              final progress = (received / total * 100).toStringAsFixed(0);
-              EasyLoading.show(status: '下载中 $progress%');
+              // final progress = (received / total * 100).toStringAsFixed(0);
+              // EasyLoading.show(status: '下载中 $progress%');
               _lastProgressUpdate = now;
             }
           }
