@@ -450,6 +450,9 @@ class HttpManager {
         onReceiveProgress: (received, total) {
           if (total != -1) {
             if (showLoading) {
+              debugPrint('下载进度:   $total');
+              debugPrint('下载进度1: $received');
+
               double progress = (received / total * 100);
               EasyLoading.showProgress(
                 progress / 100,

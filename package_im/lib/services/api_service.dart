@@ -593,7 +593,7 @@ class ApiService {
   /// 获取会话列表
   Future<ApiResponse<List<ChatConversation>>> getConversationList() async {
     try {
-      debugPrint('获取会话列表');
+      // debugPrint('获取会话列表');
 
       final response = await _httpManager.get(
         ApiConfig.getConversationsPath,
@@ -625,7 +625,7 @@ class ApiService {
               .toList();
         }
 
-        debugPrint('获取会话列表成功，共 ${conversationList.length} 个会话');
+        // debugPrint('获取会话列表成功，共 ${conversationList.length} 个会话');
 
         return ApiResponse(
           code: response.code,
@@ -1204,6 +1204,94 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('分享短视频异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取视频评论列表
+  /// 
+  /// videoId 实际上是 momentId
+  /// 返回包含分页信息的完整响应
+  Future<ApiResponse<Map<String, dynamic>>> getVideoComments({
+    required int videoId,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      debugPrint('获取视频评论: momentId=$videoId, page=$page, size=$size');
+      
+      final response = await _httpManager.get(
+        '/api/moments/$videoId/comments',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+      );
+
+      if (response.success && response.data != null) {
+        // 响应数据格式：
+        // {
+        //   "comments": [...],
+        //   "totalElements": 50,
+        //   "totalPages": 5,
+        //   "currentPage": 0,
+        //   "pageSize": 10,
+        //   "hasNext": true,
+        //   "hasPrevious": false
+        // }
+        final data = response.data as Map<String, dynamic>;
+        final comments = data['comments'] as List? ?? [];
+        debugPrint('获取评论成功: 总数=${data['totalElements']}, 当前页=${data['currentPage']}, 本页${comments.length}条');
+        
+        return ApiResponse(
+          code: response.code,
+          message: response.message,
+          data: data,
+          success: true,
+        );
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: null,
+        success: false,
+      );
+    } catch (e) {
+      debugPrint('获取视频评论异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 发表视频评论
+  /// 
+  /// videoId 实际上是 momentId
+  Future<ApiResponse<Map<String, dynamic>>> postVideoComment({
+    required int videoId,
+    required String content,
+  }) async {
+    try {
+      debugPrint('发表评论: momentId=$videoId, content=$content');
+      
+      final response = await _httpManager.post(
+        '/api/moments/$videoId/comments',
+        data: {
+          'content': content,
+        },
+      );
+
+      if (response.success) {
+        debugPrint('评论发表成功');
+      }
+      
+      return ApiResponse(
+        code: response.code,
+        message: response.message,
+        data: response.data,
+        success: response.success,
+      );
+    } catch (e) {
+      debugPrint('发表评论异常: $e');
       rethrow;
     }
   }

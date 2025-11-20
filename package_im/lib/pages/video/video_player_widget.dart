@@ -8,12 +8,14 @@ class VideoPlayerWidget extends StatefulWidget {
   final Video video;
   final bool isPlaying;
   final VoidCallback? onTap;
+  final bool preload; // 是否预加载（不自动播放）
 
   const VideoPlayerWidget({
     super.key,
     required this.video,
     required this.isPlaying,
     this.onTap,
+    this.preload = false,
   });
 
   @override
@@ -66,22 +68,28 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isBuffering = true;
       });
 
+      // 使用 networkUrl 创建控制器（Flutter 3.x 推荐方式）
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(widget.video.videoUrl),
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: true, // 允许与其他音频混合
           allowBackgroundPlayback: false,
         ),
+        httpHeaders: {
+          // 可以添加自定义请求头，比如用户认证token
+          'Accept-Encoding': 'identity', // 避免视频被压缩导致加载慢
+        },
       );
 
       // 监听缓冲状态
       _videoController!.addListener(_videoListener);
 
+      // 初始化视频控制器
       await _videoController!.initialize();
 
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
-        autoPlay: widget.isPlaying,
+        autoPlay: false, // 先不自动播放，手动控制
         looping: true,
         showControls: false, // 抖音风格，隐藏控制条
         aspectRatio: _videoController!.value.aspectRatio,
@@ -93,22 +101,31 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             : null,
       );
 
-      // 如果需要播放，先预加载视频
-      if (widget.isPlaying) {
-        // 静音预加载，让视频开始缓冲
-        await _videoController!.setVolume(0);
-        await _videoController!.play();
-        // 等待一小段时间让视频缓冲
-        await Future.delayed(const Duration(milliseconds: 100));
-        // 恢复音量
-        await _videoController!.setVolume(1.0);
-      }
-
       if (mounted) {
         setState(() {
           _isInitialized = true;
           _isBuffering = false;
         });
+      }
+
+      // 初始化完成后，根据状态决定是否播放
+      if (widget.isPlaying && _videoController != null) {
+        // 提前缓冲：静音播放一小段时间
+        await _videoController!.setVolume(0);
+        await _videoController!.play();
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        // 恢复音量并继续播放
+        if (mounted && widget.isPlaying) {
+          await _videoController!.setVolume(1.0);
+        }
+      } else if (widget.preload && _videoController != null) {
+        // 预加载模式：静音播放并暂停，让视频开始缓冲
+        await _videoController!.setVolume(0);
+        await _videoController!.play();
+        await Future.delayed(const Duration(milliseconds: 100));
+        await _videoController!.pause();
+        await _videoController!.seekTo(Duration.zero);
       }
     } catch (e) {
       debugPrint('初始化视频失败: $e');

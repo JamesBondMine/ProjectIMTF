@@ -5,8 +5,10 @@ import 'package:preload_page_view/preload_page_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/video.dart';
 import '../../services/api_service.dart';
+import '../../utils/video_share_helper.dart';
 import 'video_player_widget.dart';
 import 'publish_video_page.dart';
+import 'video_comment_page.dart';
 
 /// 短视频页面（抖音风格）
 class ShortVideoPage extends StatefulWidget {
@@ -162,23 +164,64 @@ class _ShortVideoPageState extends State<ShortVideoPage>
     }
   }
 
+  /// 评论视频
+  Future<void> _commentVideo(int index) async {
+    final video = _videos[index];
+
+    // 打开评论页面
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => VideoCommentPage(
+        videoId: video.id,
+        initialCommentCount: video.commentCount,
+      ),
+    );
+
+    // 如果返回了新的评论数，更新UI
+    if (result != null && result != video.commentCount) {
+      setState(() {
+        _videos[index] = video.copyWith(
+          commentCount: result,
+        );
+      });
+    }
+  }
+
   /// 分享视频
   Future<void> _shareVideo(int index) async {
     final video = _videos[index];
 
-    try {
-      await _apiService.shareVideo(videoId: video.id);
-      EasyLoading.showSuccess('分享成功');
-
-      // 更新分享数
-      setState(() {
-        _videos[index] = video.copyWith(
-          shareCount: video.shareCount + 1,
-        );
-      });
-    } catch (e) {
-      EasyLoading.showError('分享失败');
-    }
+    // 显示分享选项弹窗
+    VideoShareHelper.showShareOptions(
+      context,
+      videoUrl: video.videoUrl,
+      videoTitle: video.title.isNotEmpty ? video.title : video.description,
+      coverUrl: video.coverUrl,
+      // 分享成功回调（分享好友、更多分享）
+      onShareSuccess: () async {
+        // 分享成功后，上报到服务器
+        try {
+          await _apiService.shareVideo(videoId: video.id);
+          
+          // 更新分享数
+          setState(() {
+            _videos[index] = video.copyWith(
+              shareCount: video.shareCount + 1,
+            );
+          });
+        } catch (e) {
+          debugPrint('上报分享失败: $e');
+          // 不显示错误提示，静默失败
+        }
+      },
+      // 保存成功回调（保存到相册）
+      onSaveSuccess: () {
+        // 保存到相册不需要上报到服务器
+        debugPrint('视频已保存到相册，不上报分享统计');
+      },
+    );
   }
 
   @override
@@ -277,6 +320,9 @@ class _ShortVideoPageState extends State<ShortVideoPage>
   /// 视频项
   Widget _buildVideoItem(int index) {
     final video = _videos[index];
+    
+    // 判断是否需要预加载（当前视频的前后各1个视频）
+    final shouldPreload = (index == _currentIndex - 1 || index == _currentIndex + 1);
 
     return Stack(
       fit: StackFit.expand,
@@ -285,6 +331,7 @@ class _ShortVideoPageState extends State<ShortVideoPage>
         VideoPlayerWidget(
           video: video,
           isPlaying: index == _currentIndex,
+          preload: shouldPreload && index != _currentIndex,
         ),
 
         // 右侧操作栏
@@ -308,10 +355,7 @@ class _ShortVideoPageState extends State<ShortVideoPage>
               _buildActionButton(
                 icon: Icons.comment,
                 label: _formatCount(video.commentCount),
-                onTap: () {
-                  // TODO: 打开评论页面
-                  EasyLoading.showToast('评论功能开发中');
-                },
+                onTap: () => _commentVideo(index),
               ),
               const SizedBox(height: 24),
               // 分享
