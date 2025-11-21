@@ -1,7 +1,8 @@
 /// API配置类
 class ApiConfig {
   // 基础URL配置
-  static const String baseUrl = 'https://niumowangai.top';
+  // static const String baseUrl = 'https://niumowangai.top';
+  static const String baseUrl = 'http://localhost:8888';
   
   // 连接超时时间（毫秒）
   static const int connectTimeout = 15000;
@@ -24,7 +25,8 @@ class ApiConfig {
   // - 无需端口（使用默认）：'wss://niumowangai.top'
   //
   // ⚠️ 请根据后端实际配置修改
-  static const String wsBaseUrl = 'wss://niumowangai.top';
+  // static const String wsBaseUrl = 'wss://niumowangai.top';
+  static const String wsBaseUrl = 'ws://localhost:8888';
   
   // API接口路径
   static const String loginPath = '/api/auth/login';
