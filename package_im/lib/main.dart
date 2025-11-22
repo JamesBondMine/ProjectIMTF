@@ -21,9 +21,9 @@ void _configLoading() {
     ..loadingStyle = EasyLoadingStyle.custom
     ..indicatorSize = 45.0
     ..radius = 10.0
-    ..progressColor = const Color(0xFF7B1FA2)
+    ..progressColor = const Color(0xFF00BCD4)  // 青色
     ..backgroundColor = Colors.white
-    ..indicatorColor = const Color(0xFF7B1FA2)
+    ..indicatorColor = const Color(0xFF00BCD4)  // 青色
     ..textColor = Colors.black
     ..maskColor = Colors.black.withOpacity(0.5)
     ..userInteractions = false
@@ -36,16 +36,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vendo',
+      title: '蜻蜓翼',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7B1FA2),
-          primary: const Color(0xFF7B1FA2),
+          seedColor: const Color(0xFF00BCD4),  // Material Cyan - 青色
+          primary: const Color(0xFF00BCD4),
         ),
-        primaryColor: const Color(0xFF7B1FA2),
+        primaryColor: const Color(0xFF00BCD4),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF7B1FA2),
+          backgroundColor: Color(0xFF00BCD4),  // 青色 AppBar
           foregroundColor: Colors.white,
         ),
         useMaterial3: true,
@@ -114,7 +114,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Vendo',
+              '蜻蜓翼',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
