@@ -14,7 +14,7 @@
 
 ```json
 {
-  "usernameOrEmail": "qensahi@163.com",
+  "usernameOrEmail": "miqiao21244@163.com",
   "password": "Jfy3eew1"
 }
 ```
@@ -30,8 +30,8 @@
     "tokenType": "Bearer",
     "user": {
       "id": 10,
-      "username": "qensahi@163.com",
-      "email": "qensahi@163.com",
+      "username": "miqiao21244@163.com",
+      "email": "miqiao21244@163.com",
       "nickname": "shangluo",
       "avatarUrl": null,
       "phone": "5642228124",
@@ -80,7 +80,7 @@ final apiService = ApiService();
 
 // 登录
 final response = await apiService.login(
-  usernameOrEmail: 'qensahi@163.com',
+  usernameOrEmail: 'miqiao21244@163.com',
   password: 'Jfy3eew1',
 );
 
@@ -121,7 +121,7 @@ await apiService.logout();
 
 使用提供的测试账号进行测试：
 
-- **账号**: `qensahi@163.com`
+- **账号**: `miqiao21244@163.com`
 - **密码**: `Jfy3eew1`
 
 ### 4. 在登录页面中使用

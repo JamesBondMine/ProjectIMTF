@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:package_im/pages/login/login_page.dart';
 import 'pages/home_page.dart';
@@ -6,6 +7,12 @@ import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 设置屏幕方向（iPhone竖屏，iPad支持所有方向以满足苹果多任务要求）
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   
   // 初始化ApiService（恢复登录状态）
   await ApiService().init();

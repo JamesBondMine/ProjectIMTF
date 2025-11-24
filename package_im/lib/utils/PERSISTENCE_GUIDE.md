@@ -142,8 +142,8 @@ eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEwLCJzdWIiOiJzaGFuZ2x1...
 ```json
 {
   "id": 10,
-  "username": "qensahi@163.com",
-  "email": "qensahi@163.com",
+  "username": "miqiao21244@163.com",
+  "email": "miqiao21244@163.com",
   "nickname": "shangluo",
   "avatarUrl": null,
   "phone": "5642228124",
