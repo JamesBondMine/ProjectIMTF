@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'home/home_dashboard_page.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
+import 'workspace/workspace_page.dart';
 import 'package:package_im/services/api_service.dart';
 
 /// 主页（底部导航栏）
@@ -19,8 +21,10 @@ class _HomePageState extends State<HomePage> {
 
   // 页面列表
   final List<Widget> _pages = const [
+    HomeDashboardPage(),
     ChatListPage(),
     FriendListPage(),
+    WorkspacePage(),
   ];
 
   @override
@@ -73,6 +77,11 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: '首页',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: '聊天',
@@ -81,6 +90,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
             label: '好友',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work_outline),
+            activeIcon: Icon(Icons.work),
+            label: '工作台',
           ),
         ],
       ),
