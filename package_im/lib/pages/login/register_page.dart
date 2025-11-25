@@ -105,10 +105,15 @@ class _RegisterPageState extends State<RegisterPage> {
               );
             }
           } else {
-            // 注册失败，显示错误信息
-            EasyLoading.showError(response.message.isNotEmpty
-                ? response.message
-                : '注册失败，请重试');
+            // 注册失败，显示后端返回的具体错误信息
+            String errorMsg = response.message;
+            
+            // 如果是空消息，提供默认提示
+            if (errorMsg.isEmpty) {
+              errorMsg = '注册失败，请重试';
+            }
+            
+            EasyLoading.showError(errorMsg);
           }
         }
       } catch (e) {

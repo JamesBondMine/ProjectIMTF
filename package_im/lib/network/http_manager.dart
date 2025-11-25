@@ -72,9 +72,19 @@ class HttpManager {
 
   /// 错误拦截器
   void _onError(DioException error, ErrorInterceptorHandler handler) {
-    String errorMessage = _handleError(error);
+    // 对于业务错误（400-499），不在拦截器中显示错误提示
+    // 让业务层自己处理和显示
+    if (error.response != null && 
+        error.response!.statusCode != null &&
+        error.response!.statusCode! >= 400 && 
+        error.response!.statusCode! < 500) {
+      // 业务错误，不显示通用错误提示，直接传递
+      handler.next(error);
+      return;
+    }
     
-    // 显示错误提示
+    // 其他网络错误才显示通用错误提示
+    String errorMessage = _handleError(error);
     if (ApiConfig.enableLog) {
       EasyLoading.showError(errorMessage);
     }
@@ -175,6 +185,31 @@ class HttpManager {
       }
 
       return ApiResponse.fromJson(response.data, fromJson);
+    } on DioException catch (e) {
+      if (showLoading) {
+        EasyLoading.dismiss();
+      }
+      
+      // 尝试从错误响应中提取业务错误信息
+      if (e.response?.data != null) {
+        try {
+          final data = e.response!.data;
+          if (data is Map<String, dynamic>) {
+            final msg = data['msg'] ?? data['message'] ?? _handleError(e);
+            // 返回一个失败的ApiResponse，而不是抛出异常
+            return ApiResponse<T>(
+              code: data['code'] ?? e.response!.statusCode ?? -1,
+              message: msg.toString(),
+              data: null,
+              success: false,
+            );
+          }
+        } catch (_) {
+          // 解析失败，继续抛出原异常
+        }
+      }
+      
+      rethrow;
     } catch (e) {
       if (showLoading) {
         EasyLoading.dismiss();
@@ -216,6 +251,31 @@ class HttpManager {
       }
 
       return ApiResponse.fromJson(response.data, fromJson);
+    } on DioException catch (e) {
+      if (showLoading) {
+        EasyLoading.dismiss();
+      }
+      
+      // 尝试从错误响应中提取业务错误信息
+      if (e.response?.data != null) {
+        try {
+          final data = e.response!.data;
+          if (data is Map<String, dynamic>) {
+            final msg = data['msg'] ?? data['message'] ?? _handleError(e);
+            // 返回一个失败的ApiResponse，而不是抛出异常
+            return ApiResponse<T>(
+              code: data['code'] ?? e.response!.statusCode ?? -1,
+              message: msg.toString(),
+              data: null,
+              success: false,
+            );
+          }
+        } catch (_) {
+          // 解析失败，继续抛出原异常
+        }
+      }
+      
+      rethrow;
     } catch (e) {
       if (showLoading) {
         EasyLoading.dismiss();

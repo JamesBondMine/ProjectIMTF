@@ -3,6 +3,7 @@ import 'leave_page.dart';
 import 'weekly_report_page.dart';
 import 'monthly_report_page.dart';
 import 'approval_page.dart';
+import 'organization_page.dart';
 
 /// 工作台
 class WorkspacePage extends StatefulWidget {
@@ -38,6 +39,12 @@ class _WorkspacePageState extends State<WorkspacePage> {
       'label': '审批',
       'color': Colors.purple,
       'page': const ApprovalPage(),
+    },
+    {
+      'icon': Icons.account_tree,
+      'label': '组织架构',
+      'color': Colors.teal,
+      'page': const OrganizationPage(),
     },
   ];
 
