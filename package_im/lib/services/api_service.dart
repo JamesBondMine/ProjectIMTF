@@ -715,6 +715,142 @@ class ApiService {
     }
   }
 
+  // ==================== 组织架构相关 ====================
+
+  /// 获取部门树
+  Future<ApiResponse<List<dynamic>>> getDepartmentTree() async {
+    try {
+      debugPrint('获取部门树');
+
+      final response = await _httpManager.get<List<dynamic>>(
+        ApiConfig.getDepartmentTreePath,
+        showLoading: false,
+        fromJson: (json) => json as List<dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取部门树成功: ${response.data?.length ?? 0}个顶级部门');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取部门树异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取所有部门列表（扁平化）
+  Future<ApiResponse<List<dynamic>>> getAllDepartments() async {
+    try {
+      debugPrint('获取所有部门列表');
+
+      final response = await _httpManager.get<List<dynamic>>(
+        ApiConfig.getAllDepartmentsPath,
+        showLoading: false,
+        fromJson: (json) => json as List<dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取部门列表成功: ${response.data?.length ?? 0}个部门');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取部门列表异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取部门成员列表
+  Future<ApiResponse<List<dynamic>>> getDepartmentMembers(int departmentId) async {
+    try {
+      debugPrint('获取部门成员列表: departmentId=$departmentId');
+
+      final response = await _httpManager.get<List<dynamic>>(
+        ApiConfig.getDepartmentMembersPath(departmentId),
+        showLoading: false,
+        fromJson: (json) => json as List<dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取部门成员成功: ${response.data?.length ?? 0}个成员');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取部门成员异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取当前用户的部门信息
+  Future<ApiResponse<List<dynamic>>> getMyDepartments() async {
+    try {
+      debugPrint('获取当前用户的部门信息');
+
+      final response = await _httpManager.get<List<dynamic>>(
+        ApiConfig.getMyDepartmentsPath,
+        showLoading: false,
+        fromJson: (json) => json as List<dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取用户部门信息成功: ${response.data?.length ?? 0}个部门');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取用户部门信息异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 添加用户到部门
+  /// 
+  /// [userId] 用户ID
+  /// [departmentId] 部门ID
+  /// [position] 职位
+  /// [isPrimary] 是否为主部门
+  /// [isLeader] 是否为部门负责人
+  /// [joinDate] 加入日期 (格式: yyyy-MM-dd)
+  Future<ApiResponse<dynamic>> addUserToDepartment({
+    required int userId,
+    required int departmentId,
+    required String position,
+    bool isPrimary = true,
+    bool isLeader = false,
+    String? joinDate,
+  }) async {
+    try {
+      debugPrint('添加用户到部门: userId=$userId, departmentId=$departmentId, position=$position');
+
+      // 如果没有提供加入日期，使用当前日期
+      final date = joinDate ?? DateTime.now().toIso8601String().split('T')[0];
+
+      final response = await _httpManager.post(
+        ApiConfig.addUserToDepartmentPath,
+        data: {
+          'userId': userId,
+          'departmentId': departmentId,
+          'position': position,
+          'isPrimary': isPrimary,
+          'isLeader': isLeader,
+          'joinDate': date,
+        },
+        showLoading: true,
+      );
+
+      if (response.success) {
+        debugPrint('添加用户到部门成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('添加用户到部门异常: $e');
+      rethrow;
+    }
+  }
+
   /// 提交反馈任务到 /api/tasks
   Future<ApiResponse<dynamic>> submitFeedbackTask({
     required String taskType,

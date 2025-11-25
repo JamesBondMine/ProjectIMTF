@@ -88,7 +88,17 @@ class _SplashPageState extends State<SplashPage> {
     
     // 检查是否已登录
     if (apiService.isLoggedIn && apiService.currentUser != null) {
-      // 已登录，跳转到主页
+      // 已登录，从服务器刷新用户信息
+      try {
+        await apiService.getCurrentUserInfo();
+      } catch (e) {
+        debugPrint('刷新用户信息失败: $e');
+        // 即使刷新失败，也继续使用本地缓存的用户信息
+      }
+      
+      if (!mounted) return;
+      
+      // 跳转到主页
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => HomePage(

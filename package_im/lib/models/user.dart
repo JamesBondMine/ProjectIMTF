@@ -12,6 +12,12 @@ class User {
   final String createdAt;
   final String updatedAt;
   final bool? isFriend; // 是否为好友（搜索用户时返回）
+  final String? employeeNo; // 工号
+  final String? entryDate; // 入职日期
+  final int? managerId; // 上级主管ID
+  final String? managerName; // 上级主管姓名
+  final int? primaryDepartmentId; // 主部门ID
+  final String? primaryDepartmentName; // 主部门名称
 
   User({
     required this.id,
@@ -26,6 +32,12 @@ class User {
     required this.createdAt,
     required this.updatedAt,
     this.isFriend,
+    this.employeeNo,
+    this.entryDate,
+    this.managerId,
+    this.managerName,
+    this.primaryDepartmentId,
+    this.primaryDepartmentName,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -42,6 +54,12 @@ class User {
       createdAt: json['createdAt'] ?? '',
       updatedAt: json['updatedAt'] ?? '',
       isFriend: json['isFriend'],
+      employeeNo: json['employeeNo'],
+      entryDate: json['entryDate'],
+      managerId: json['managerId'],
+      managerName: json['managerName'],
+      primaryDepartmentId: json['primaryDepartmentId'],
+      primaryDepartmentName: json['primaryDepartmentName'],
     );
   }
 
@@ -59,6 +77,12 @@ class User {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       if (isFriend != null) 'isFriend': isFriend,
+      if (employeeNo != null) 'employeeNo': employeeNo,
+      if (entryDate != null) 'entryDate': entryDate,
+      if (managerId != null) 'managerId': managerId,
+      if (managerName != null) 'managerName': managerName,
+      if (primaryDepartmentId != null) 'primaryDepartmentId': primaryDepartmentId,
+      if (primaryDepartmentName != null) 'primaryDepartmentName': primaryDepartmentName,
     };
   }
 

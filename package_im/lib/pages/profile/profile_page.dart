@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
 import '../../services/api_service.dart';
+import '../../models/department.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
 import 'feedback_page.dart';
@@ -22,6 +23,52 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _apiService = ApiService();
   final _imagePicker = ImagePicker();
+  List<DepartmentMember> _myDepartments = [];
+  bool _isLoadingDepartments = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshUserInfo();
+    _loadMyDepartments();
+  }
+
+  /// 刷新用户信息
+  Future<void> _refreshUserInfo() async {
+    try {
+      await _apiService.getCurrentUserInfo();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('刷新用户信息失败: $e');
+    }
+  }
+
+  /// 加载当前用户的部门信息
+  Future<void> _loadMyDepartments() async {
+    setState(() {
+      _isLoadingDepartments = true;
+    });
+
+    try {
+      final response = await _apiService.getMyDepartments();
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _myDepartments = response.data!
+              .map((json) => DepartmentMember.fromJson(json as Map<String, dynamic>))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('加载用户部门信息失败: $e');
+    } finally {
+      setState(() {
+        _isLoadingDepartments = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +289,8 @@ class _ProfilePageState extends State<ProfilePage> {
             title: '邮箱',
             value: user?.email ?? '未设置',
           ),
+          const Divider(height: 1, indent: 56),
+          _buildDepartmentInfoItem(),
         ],
       ),
     );
@@ -327,6 +376,195 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           
         ],
+      ),
+    );
+  }
+
+  /// 部门信息项
+  Widget _buildDepartmentInfoItem() {
+    final user = _apiService.currentUser;
+    
+    // 优先使用用户信息中的主部门
+    if (user?.primaryDepartmentName != null && user!.primaryDepartmentName!.isNotEmpty) {
+      return InkWell(
+        onTap: _myDepartments.isNotEmpty ? _showDepartmentDetail : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.business, color: Colors.grey[600]),
+              const SizedBox(width: 32),
+              const Text(
+                '部门',
+                style: TextStyle(fontSize: 14),
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        user.primaryDepartmentName!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_myDepartments.length > 1) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '+${_myDepartments.length - 1}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (user.entryDate != null && user.entryDate!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '入职: ${user.entryDate}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(width: 4),
+              if (_myDepartments.isNotEmpty)
+                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    // 加载中状态
+    if (_isLoadingDepartments) {
+      return ListTile(
+        leading: Icon(Icons.business, color: Colors.grey[600]),
+        title: const Text(
+          '部门',
+          style: TextStyle(fontSize: 14),
+        ),
+        trailing: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    // 如果有部门详情数据，使用详情数据
+    if (_myDepartments.isNotEmpty) {
+      // 查找主部门
+      final primaryDept = _myDepartments.firstWhere(
+        (dept) => dept.isPrimary,
+        orElse: () => _myDepartments.first,
+      );
+
+      return InkWell(
+        onTap: _showDepartmentDetail,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.business, color: Colors.grey[600]),
+              const SizedBox(width: 32),
+              const Text(
+                '部门',
+                style: TextStyle(fontSize: 14),
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        primaryDept.departmentName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_myDepartments.length > 1) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '+${_myDepartments.length - 1}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    primaryDept.position,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 未分配部门
+    return ListTile(
+      leading: Icon(Icons.business, color: Colors.grey[600]),
+      title: const Text(
+        '部门',
+        style: TextStyle(fontSize: 14),
+      ),
+      trailing: Text(
+        '未分配',
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -422,6 +660,221 @@ class _ProfilePageState extends State<ProfilePage> {
       title: Text(title),
       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       onTap: onTap,
+    );
+  }
+
+  /// 显示部门详情
+  void _showDepartmentDetail() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 头部
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.7),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '我的部门',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              // 部门列表
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _myDepartments.length,
+                  itemBuilder: (context, index) {
+                    final dept = _myDepartments[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: dept.isPrimary
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey[200]!,
+                          width: dept.isPrimary ? 2 : 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.business,
+                                    color: Theme.of(context).primaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    dept.departmentName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (dept.isPrimary)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '主部门',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildDeptDetailRow(
+                              Icons.work_outline,
+                              '职位',
+                              dept.position,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildDeptDetailRow(
+                              Icons.calendar_today,
+                              '入职日期',
+                              dept.joinDate,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildDeptDetailRow(
+                              Icons.info_outline,
+                              '状态',
+                              dept.statusText,
+                            ),
+                            if (dept.isLeader) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '部门负责人',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建部门详情行
+  Widget _buildDeptDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -583,7 +1036,10 @@ class _ProfilePageState extends State<ProfilePage> {
       if (updateResult.success) {
         EasyLoading.showSuccess('头像更新成功');
         
-        // 3. 刷新UI
+        // 3. 从服务器刷新用户信息
+        await _apiService.getCurrentUserInfo();
+        
+        // 4. 刷新UI
         if (mounted) {
           setState(() {});
         }
@@ -654,6 +1110,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (result.success) {
         EasyLoading.showSuccess('昵称更新成功');
+        
+        // 从服务器刷新用户信息
+        await _apiService.getCurrentUserInfo();
         
         // 刷新UI
         if (mounted) {
@@ -973,6 +1432,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (result.success) {
         EasyLoading.showSuccess('手机号更新成功');
+        
+        // 从服务器刷新用户信息
+        await _apiService.getCurrentUserInfo();
         
         // 刷新UI
         if (mounted) {

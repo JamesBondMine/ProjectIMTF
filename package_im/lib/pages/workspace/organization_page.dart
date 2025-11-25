@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:package_im/models/department.dart';
+import 'package:package_im/services/api_service.dart';
+import 'add_member_page.dart';
 
 /// 组织架构页面
 class OrganizationPage extends StatefulWidget {
@@ -11,10 +14,10 @@ class OrganizationPage extends StatefulWidget {
 
 class _OrganizationPageState extends State<OrganizationPage> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
   List<Department> _departments = [];
   List<Department> _filteredDepartments = [];
   bool _isLoading = false;
-  int _selectedIndex = 0; // 0: 部门视图, 1: 员工列表
 
   @override
   void initState() {
@@ -35,177 +38,22 @@ class _OrganizationPageState extends State<OrganizationPage> {
     });
 
     try {
-      // TODO: 调用API获取组织架构数据
-      await Future.delayed(const Duration(seconds: 1));
+      // 调用API获取组织架构数据
+      final response = await _apiService.getDepartmentTree();
 
-      // 模拟数据
-      setState(() {
-        _departments = [
-          Department(
-            id: 1,
-            name: '技术部',
-            parentId: null,
-            level: 1,
-            manager: Employee(
-              id: 1,
-              name: '张三',
-              position: '技术总监',
-              avatar: '',
-              phone: '13800138001',
-              email: 'zhangsan@company.com',
-            ),
-            employeeCount: 25,
-            children: [
-              Department(
-                id: 2,
-                name: '前端组',
-                parentId: 1,
-                level: 2,
-                manager: Employee(
-                  id: 2,
-                  name: '李四',
-                  position: '前端组长',
-                  avatar: '',
-                  phone: '13800138002',
-                  email: 'lisi@company.com',
-                ),
-                employeeCount: 8,
-                children: [],
-              ),
-              Department(
-                id: 3,
-                name: '后端组',
-                parentId: 1,
-                level: 2,
-                manager: Employee(
-                  id: 3,
-                  name: '王五',
-                  position: '后端组长',
-                  avatar: '',
-                  phone: '13800138003',
-                  email: 'wangwu@company.com',
-                ),
-                employeeCount: 10,
-                children: [],
-              ),
-              Department(
-                id: 4,
-                name: '测试组',
-                parentId: 1,
-                level: 2,
-                manager: Employee(
-                  id: 4,
-                  name: '赵六',
-                  position: '测试组长',
-                  avatar: '',
-                  phone: '13800138004',
-                  email: 'zhaoliu@company.com',
-                ),
-                employeeCount: 7,
-                children: [],
-              ),
-            ],
-          ),
-          Department(
-            id: 5,
-            name: '产品部',
-            parentId: null,
-            level: 1,
-            manager: Employee(
-              id: 5,
-              name: '孙七',
-              position: '产品总监',
-              avatar: '',
-              phone: '13800138005',
-              email: 'sunqi@company.com',
-            ),
-            employeeCount: 15,
-            children: [
-              Department(
-                id: 6,
-                name: 'C端产品组',
-                parentId: 5,
-                level: 2,
-                manager: Employee(
-                  id: 6,
-                  name: '周八',
-                  position: 'C端产品经理',
-                  avatar: '',
-                  phone: '13800138006',
-                  email: 'zhouba@company.com',
-                ),
-                employeeCount: 8,
-                children: [],
-              ),
-              Department(
-                id: 7,
-                name: 'B端产品组',
-                parentId: 5,
-                level: 2,
-                manager: Employee(
-                  id: 7,
-                  name: '吴九',
-                  position: 'B端产品经理',
-                  avatar: '',
-                  phone: '13800138007',
-                  email: 'wujiu@company.com',
-                ),
-                employeeCount: 7,
-                children: [],
-              ),
-            ],
-          ),
-          Department(
-            id: 8,
-            name: '市场部',
-            parentId: null,
-            level: 1,
-            manager: Employee(
-              id: 8,
-              name: '郑十',
-              position: '市场总监',
-              avatar: '',
-              phone: '13800138008',
-              email: 'zhengshi@company.com',
-            ),
-            employeeCount: 12,
-            children: [],
-          ),
-          Department(
-            id: 9,
-            name: '人力资源部',
-            parentId: null,
-            level: 1,
-            manager: Employee(
-              id: 9,
-              name: '钱十一',
-              position: 'HR总监',
-              avatar: '',
-              phone: '13800138009',
-              email: 'qianshiyi@company.com',
-            ),
-            employeeCount: 6,
-            children: [],
-          ),
-          Department(
-            id: 10,
-            name: '财务部',
-            parentId: null,
-            level: 1,
-            manager: Employee(
-              id: 10,
-              name: '陈十二',
-              position: '财务总监',
-              avatar: '',
-              phone: '13800138010',
-              email: 'chenshier@company.com',
-            ),
-            employeeCount: 5,
-            children: [],
-          ),
-        ];
-        _filteredDepartments = _departments;
-      });
+      if (response.success && response.data != null) {
+        setState(() {
+          // 将动态数据转换为Department对象
+          _departments = response.data!
+              .map((json) => Department.fromJson(json as Map<String, dynamic>))
+              .toList();
+          _filteredDepartments = _departments;
+        });
+      } else {
+        EasyLoading.showError(response.message.isNotEmpty 
+            ? response.message 
+            : '加载部门数据失败');
+      }
     } catch (e) {
       EasyLoading.showError('加载失败: $e');
     } finally {
@@ -226,8 +74,9 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
     setState(() {
       _filteredDepartments = _departments.where((dept) {
-        return dept.name.toLowerCase().contains(query.toLowerCase()) ||
-            dept.manager.name.toLowerCase().contains(query.toLowerCase());
+        final matchesName = dept.name.toLowerCase().contains(query.toLowerCase());
+        final matchesLeader = dept.leaderName?.toLowerCase().contains(query.toLowerCase()) ?? false;
+        return matchesName || matchesLeader;
       }).toList();
     });
   }
@@ -248,78 +97,44 @@ class _OrganizationPageState extends State<OrganizationPage> {
       appBar: AppBar(
         title: const Text('组织架构'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            tooltip: '添加成员',
+            onPressed: _showAddMemberDialog,
+          ),
+        ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Column(
-            children: [
-              // 搜索框
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '搜索部门或人员',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchDepartment('');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  onChanged: _searchDepartment,
-                ),
-              ),
-              // Tab切换
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: '搜索部门或负责人',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchDepartment('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildTabButton(
-                        label: '部门视图',
-                        icon: Icons.account_tree,
-                        isSelected: _selectedIndex == 0,
-                        onTap: () {
-                          setState(() {
-                            _selectedIndex = 0;
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildTabButton(
-                        label: '员工列表',
-                        icon: Icons.people,
-                        isSelected: _selectedIndex == 1,
-                        onTap: () {
-                          setState(() {
-                            _selectedIndex = 1;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
               ),
-            ],
+              onChanged: _searchDepartment,
+            ),
           ),
         ),
       ),
@@ -327,55 +142,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: _selectedIndex == 0
-                  ? _buildDepartmentView()
-                  : _buildEmployeeView(),
+              child: _buildDepartmentView(),
             ),
-    );
-  }
-
-  /// 构建Tab按钮
-  Widget _buildTabButton({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey[600],
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -390,30 +158,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
       itemCount: _filteredDepartments.length,
       itemBuilder: (context, index) {
         return _buildDepartmentCard(_filteredDepartments[index]);
-      },
-    );
-  }
-
-  /// 构建员工视图
-  Widget _buildEmployeeView() {
-    // 获取所有员工
-    List<Employee> allEmployees = [];
-    for (var dept in _departments) {
-      allEmployees.add(dept.manager);
-      for (var subDept in dept.children) {
-        allEmployees.add(subDept.manager);
-      }
-    }
-
-    if (allEmployees.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: allEmployees.length,
-      itemBuilder: (context, index) {
-        return _buildEmployeeCard(allEmployees[index]);
       },
     );
   }
@@ -484,7 +228,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  '${department.employeeCount}人',
+                                  department.employeeCountText,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.blue,
@@ -503,19 +247,15 @@ class _OrganizationPageState extends State<OrganizationPage> {
                                 color: Colors.grey[600],
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                '负责人: ${department.manager.name}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                department.manager.position,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
+                              Expanded(
+                                child: Text(
+                                  department.leaderDisplayText,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -602,232 +342,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
     );
   }
 
-  /// 构建员工卡片
-  Widget _buildEmployeeCard(Employee employee) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          _showEmployeeDetail(employee);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: Text(
-                  employee.name.substring(0, 1),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      employee.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      employee.position,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.phone, size: 20),
-                    color: Colors.green,
-                    onPressed: () {
-                      // TODO: 拨打电话
-                      EasyLoading.showInfo('拨打: ${employee.phone}');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.email, size: 20),
-                    color: Colors.blue,
-                    onPressed: () {
-                      // TODO: 发送邮件
-                      EasyLoading.showInfo('邮件: ${employee.email}');
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 显示员工详情
-  void _showEmployeeDetail(Employee employee) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: Text(
-                  employee.name.substring(0, 1),
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                employee.name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                employee.position,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildInfoRow(Icons.phone, '电话', employee.phone),
-              const SizedBox(height: 12),
-              _buildInfoRow(Icons.email, '邮箱', employee.email),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        EasyLoading.showInfo('拨打: ${employee.phone}');
-                      },
-                      icon: const Icon(Icons.phone),
-                      label: const Text('拨打电话'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        EasyLoading.showInfo('发送邮件给: ${employee.email}');
-                      },
-                      icon: const Icon(Icons.email),
-                      label: const Text('发送邮件'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// 构建信息行
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Text(
-          '$label：',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// 构建空状态
   Widget _buildEmptyState() {
     return Center(
@@ -865,6 +379,21 @@ class _OrganizationPageState extends State<OrganizationPage> {
         return Colors.grey;
     }
   }
+
+  /// 显示添加成员对话框
+  void _showAddMemberDialog() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddMemberPage(),
+      ),
+    ).then((result) {
+      if (result == true) {
+        // 添加成功，刷新数据
+        _loadData();
+      }
+    });
+  }
 }
 
 /// 部门详情页面
@@ -878,46 +407,37 @@ class DepartmentDetailPage extends StatefulWidget {
 }
 
 class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
-  List<Employee> _employees = [];
-  bool _isLoading = false;
+  final ApiService _apiService = ApiService();
+  List<DepartmentMember> _members = [];
+  bool _isLoadingMembers = false;
 
   @override
   void initState() {
     super.initState();
-    _loadEmployees();
+    _loadMembers();
   }
 
-  /// 加载部门员工
-  Future<void> _loadEmployees() async {
+  /// 加载部门成员
+  Future<void> _loadMembers() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingMembers = true;
     });
 
     try {
-      // TODO: 调用API获取部门员工
-      await Future.delayed(const Duration(milliseconds: 500));
+      final response = await _apiService.getDepartmentMembers(widget.department.id);
 
-      // 模拟数据
-      setState(() {
-        _employees = List.generate(
-          widget.department.employeeCount,
-          (index) => Employee(
-            id: index + 100,
-            name: '员工${index + 1}',
-            position: index == 0 ? widget.department.manager.position : '普通员工',
-            avatar: '',
-            phone: '138001380${index.toString().padLeft(2, '0')}',
-            email: 'employee${index + 1}@company.com',
-          ),
-        );
-        // 替换第一个为部门经理
-        _employees[0] = widget.department.manager;
-      });
+      if (response.success && response.data != null) {
+        setState(() {
+          _members = response.data!
+              .map((json) => DepartmentMember.fromJson(json as Map<String, dynamic>))
+              .toList();
+        });
+      }
     } catch (e) {
-      EasyLoading.showError('加载失败: $e');
+      debugPrint('加载部门成员失败: $e');
     } finally {
       setState(() {
-        _isLoading = false;
+        _isLoadingMembers = false;
       });
     }
   }
@@ -929,9 +449,7 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
         title: Text(widget.department.name),
         centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -991,7 +509,7 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '部门人数: ${widget.department.employeeCount}人',
+                                    '部门人数: ${widget.department.employeeCountText}',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.white.withOpacity(0.9),
@@ -1002,61 +520,56 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.white,
-                                child: Text(
-                                  widget.department.manager.name.substring(0, 1),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
+                        if (widget.department.hasLeader) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.white,
+                                  child: Text(
+                                    widget.department.leaderName!.substring(0, 1),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      '部门负责人',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white70,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        '部门负责人',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white70,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      widget.department.manager.name,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        widget.department.leaderName!,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      widget.department.manager.position,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -1099,7 +612,7 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          subtitle: Text('${subDept.employeeCount}人'),
+                          subtitle: Text(subDept.employeeCountText),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
                             Navigator.push(
@@ -1116,165 +629,513 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                     const SizedBox(height: 16),
                   ],
 
-                  // 部门成员列表
+                  // 部门描述（如果有）
+                  if (widget.department.description != null && 
+                      widget.department.description!.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        '部门简介',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Text(
+                        widget.department.description!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 部门成员
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      '部门成员',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '部门成员',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        if (_members.isNotEmpty)
+                          Text(
+                            '共${_members.length}人',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _employees.length,
-                    itemBuilder: (context, index) {
-                      final employee = _employees[index];
-                      final isManager = index == 0;
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor:
-                                    Theme.of(context).primaryColor.withOpacity(0.1),
-                                child: Text(
-                                  employee.name.substring(0, 1),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ),
-                              if (isManager)
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.star,
-                                      size: 12,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                  _isLoadingMembers
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: CircularProgressIndicator(),
                           ),
-                          title: Row(
-                            children: [
-                              Text(
-                                employee.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                        )
+                      : _members.isEmpty
+                          ? Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.all(32),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              if (isManager) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    '负责人',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.people_outline,
+                                      size: 48,
+                                      color: Colors.grey[400],
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '暂无成员',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ],
-                          ),
-                          subtitle: Text(employee.position),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.phone, size: 20),
-                                color: Colors.green,
-                                onPressed: () {
-                                  EasyLoading.showInfo('拨打: ${employee.phone}');
-                                },
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.email, size: 20),
-                                color: Colors.blue,
-                                onPressed: () {
-                                  EasyLoading.showInfo('邮件: ${employee.email}');
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _members.length,
+                              itemBuilder: (context, index) {
+                                return _buildMemberCard(_members[index]);
+                              },
+                            ),
                   const SizedBox(height: 16),
                 ],
               ),
             ),
     );
   }
+
+  /// 构建成员卡片
+  Widget _buildMemberCard(DepartmentMember member) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // 头像
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: Text(
+                    member.nameInitial,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+                // 负责人标识
+                if (member.isLeader)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            // 成员信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          member.displayName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // 状态标识
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: member.statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          member.statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: member.statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.badge_outlined,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          member.position,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '入职: ${member.joinDate}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      if (member.isPrimary) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '主部门',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (member.isLeader) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '负责人',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 操作按钮
+            PopupMenuButton(
+              icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'contact',
+                  child: Row(
+                    children: [
+                      Icon(Icons.phone, size: 18),
+                      SizedBox(width: 8),
+                      Text('联系'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'message',
+                  child: Row(
+                    children: [
+                      Icon(Icons.message, size: 18),
+                      SizedBox(width: 8),
+                      Text('发消息'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'detail',
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18),
+                      SizedBox(width: 8),
+                      Text('详情'),
+                    ],
+                  ),
+                ),
+              ],
+              onSelected: (value) {
+                switch (value) {
+                  case 'contact':
+                    EasyLoading.showInfo('联系 ${member.displayName}');
+                    break;
+                  case 'message':
+                    EasyLoading.showInfo('发消息给 ${member.displayName}');
+                    break;
+                  case 'detail':
+                    _showMemberDetail(member);
+                    break;
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示成员详情
+  void _showMemberDetail(DepartmentMember member) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              // 头部
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.7),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '成员详情',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        member.nameInitial,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      member.displayName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      member.position,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 详细信息
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildDetailItem(Icons.person, '用户名', member.username),
+                    _buildDetailItem(Icons.badge, '昵称', member.nickname),
+                    _buildDetailItem(Icons.business, '部门', member.departmentName),
+                    _buildDetailItem(Icons.work, '职位', member.position),
+                    _buildDetailItem(Icons.calendar_today, '入职日期', member.joinDate),
+                    if (member.leaveDate != null)
+                      _buildDetailItem(Icons.exit_to_app, '离职日期', member.leaveDate!),
+                    _buildDetailItem(Icons.info, '状态', member.statusText),
+                    _buildDetailItem(
+                      Icons.apartment, 
+                      '主部门', 
+                      member.isPrimary ? '是' : '否',
+                    ),
+                    _buildDetailItem(
+                      Icons.star, 
+                      '部门负责人', 
+                      member.isLeader ? '是' : '否',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建详情项
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
-
-/// 部门模型
-class Department {
-  final int id;
-  final String name;
-  final int? parentId;
-  final int level;
-  final Employee manager;
-  final int employeeCount;
-  final List<Department> children;
-
-  Department({
-    required this.id,
-    required this.name,
-    this.parentId,
-    required this.level,
-    required this.manager,
-    required this.employeeCount,
-    this.children = const [],
-  });
-}
-
-/// 员工模型
-class Employee {
-  final int id;
-  final String name;
-  final String position;
-  final String avatar;
-  final String phone;
-  final String email;
-
-  Employee({
-    required this.id,
-    required this.name,
-    required this.position,
-    required this.avatar,
-    required this.phone,
-    required this.email,
-  });
-}
-

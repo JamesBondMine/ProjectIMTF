@@ -78,6 +78,23 @@ class ApiConfig {
   // 删除会话
   static String deleteConversationPath(String conversationId) => '/api/chat/conversations/$conversationId';
   
+  // 组织架构
+  // 获取部门树
+  static const String getDepartmentTreePath = '/api/organization/departments/tree';
+  
+  // 获取所有部门列表（扁平化）
+  static const String getAllDepartmentsPath = '/api/organization/departments';
+  
+  // 获取部门成员列表
+  static String getDepartmentMembersPath(int departmentId) => 
+      '/api/organization/departments/$departmentId/members';
+  
+  // 获取当前用户的部门信息
+  static const String getMyDepartmentsPath = '/api/organization/my-departments';
+  
+  // 添加用户到部门
+  static const String addUserToDepartmentPath = '/api/organization/departments/members';
+  
   // 请求头
   static Map<String, dynamic> get headers => {
         'Content-Type': 'application/json',
