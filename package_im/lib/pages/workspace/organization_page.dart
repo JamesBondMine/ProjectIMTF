@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:package_im/models/department.dart';
+import 'package:package_im/models/user.dart';
 import 'package:package_im/services/api_service.dart';
+import 'package:package_im/pages/chat/chat_page.dart';
 import 'add_member_page.dart';
 
 /// 组织架构页面
@@ -969,7 +971,7 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                     EasyLoading.showInfo('联系 ${member.displayName}');
                     break;
                   case 'message':
-                    EasyLoading.showInfo('发消息给 ${member.displayName}');
+                    _sendMessageToMember(member);
                     break;
                   case 'detail':
                     _showMemberDetail(member);
@@ -1137,5 +1139,198 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
         ],
       ),
     );
+  }
+
+  /// 发消息给成员
+  Future<void> _sendMessageToMember(DepartmentMember member) async {
+    try {
+      // 显示加载提示
+      EasyLoading.show(status: '检查中...');
+
+      // 1. 检查是否是好友
+      final checkResponse = await _apiService.checkFriend(member.userId);
+      
+      EasyLoading.dismiss();
+
+      if (checkResponse.success && checkResponse.data == true) {
+        // 是好友，直接发消息
+        debugPrint('✅ ${member.displayName} 已是好友，直接发消息');
+        _navigateToChat(member);
+      } else {
+        // 不是好友，询问是否添加
+        _showAddFriendDialog(member);
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      EasyLoading.showError('操作失败: $e');
+    }
+  }
+
+  /// 显示添加好友对话框
+  void _showAddFriendDialog(DepartmentMember member) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final remarkController = TextEditingController();
+        
+        return AlertDialog(
+          title: const Text('添加好友'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${member.displayName} 还不是您的好友'),
+              const SizedBox(height: 16),
+              const Text(
+                '是否添加为好友？',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: remarkController,
+                decoration: const InputDecoration(
+                  labelText: '备注名（可选）',
+                  hintText: '为对方设置一个备注名',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _addFriendAndSendMessage(
+                  member,
+                  remarkController.text.trim(),
+                );
+              },
+              child: const Text('添加并发消息'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 添加好友并发消息
+  Future<void> _addFriendAndSendMessage(
+    DepartmentMember member,
+    String remark,
+  ) async {
+    try {
+      // 显示加载提示
+      EasyLoading.show(status: '添加好友中...');
+
+      // 添加好友
+      final addResponse = await _apiService.addFriend(
+        friendId: member.userId,
+        remark: remark.isNotEmpty ? remark : null,
+      );
+
+      EasyLoading.dismiss();
+
+      if (addResponse.success) {
+        EasyLoading.showSuccess('添加好友成功');
+        
+        // 延迟一下，然后跳转到聊天页面
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _navigateToChat(member);
+          }
+        });
+      } else {
+        EasyLoading.showError(addResponse.message);
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      EasyLoading.showError('添加好友失败: $e');
+    }
+  }
+
+  /// 跳转到聊天页面
+  Future<void> _navigateToChat(DepartmentMember member) async {
+    try {
+      // 显示加载提示
+      EasyLoading.show(status: '加载中...');
+
+      // 获取或创建会话
+      final response = await _apiService.getConversationWithUser(member.userId);
+
+      EasyLoading.dismiss();
+
+      if (response.success && response.data != null) {
+        final conversation = response.data!;
+        
+        debugPrint('✅ 获取到会话 ID: ${conversation.id}');
+        
+        // 跳转到聊天页面
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChatPage(
+                friend: User(
+                  id: member.userId,
+                  username: member.username,
+                  nickname: member.nickname.isNotEmpty ? member.nickname : member.username,
+                  email: '',
+                  phone: '',
+                  avatarUrl: null,
+                  status: 'ACTIVE',
+                  userType: 'NORMAL',
+                  isGuest: false,
+                  createdAt: DateTime.now().toIso8601String(),
+                  updatedAt: DateTime.now().toIso8601String(),
+                ),
+                conversationId: int.tryParse(conversation.id),
+              ),
+            ),
+          );
+        }
+      } else {
+        // 获取会话失败，仍然可以跳转（聊天页面会创建新会话）
+        if (mounted) {
+          EasyLoading.showError(response.message);
+          
+          // 延迟跳转，让用户看到提示
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    friend: User(
+                      id: member.userId,
+                      username: member.username,
+                      nickname: member.nickname.isNotEmpty ? member.nickname : member.username,
+                      email: '',
+                      phone: '',
+                      avatarUrl: null,
+                      status: 'ACTIVE',
+                      userType: 'NORMAL',
+                      isGuest: false,
+                      createdAt: DateTime.now().toIso8601String(),
+                      updatedAt: DateTime.now().toIso8601String(),
+                    ),
+                    conversationId: null,
+                  ),
+                ),
+              );
+            }
+          });
+        }
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      if (mounted) {
+        EasyLoading.showError('操作失败: $e');
+      }
+    }
   }
 }

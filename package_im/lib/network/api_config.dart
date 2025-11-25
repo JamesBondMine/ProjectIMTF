@@ -60,6 +60,9 @@ class ApiConfig {
   // 获取好友列表
   static const String getFriendsPath = '/api/friends';
   
+  // 检查好友关系
+  static String checkFriendPath(int userId) => '/api/friends/check/$userId';
+  
   // 发送消息
   static const String sendMessagePath = '/api/chat/messages';
   
@@ -94,6 +97,18 @@ class ApiConfig {
   
   // 添加用户到部门
   static const String addUserToDepartmentPath = '/api/organization/departments/members';
+
+  // 工作流
+  // 提交请假申请
+  static const String submitLeavePath = '/api/workflow/leave';
+  
+  // 获取待办列表（分页）
+  static String getPendingTasksPath({int page = 0, int size = 10}) => 
+      '/api/workflow/approval/pending?page=$page&size=$size';
+  
+  // 获取已办列表（分页）
+  static String getDoneTasksPath({int page = 0, int size = 10}) => 
+      '/api/workflow/approval/done?page=$page&size=$size';
   
   // 请求头
   static Map<String, dynamic> get headers => {

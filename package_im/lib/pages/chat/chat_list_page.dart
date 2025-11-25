@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/chat_conversation.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
-import '../profile/profile_page.dart';
 import '../friend/add_friend_page.dart';
 import 'chat_page.dart';
 
@@ -21,38 +19,16 @@ class ChatListPage extends StatefulWidget {
   State<ChatListPage> createState() => _ChatListPageState();
 }
 
-class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderStateMixin {
+class _ChatListPageState extends State<ChatListPage> {
   List<ChatConversation> _conversationList = [];
   bool _isLoading = false;
   final _apiService = ApiService();
   final _remarkService = RemarkService();
   Timer? _refreshTimer;  // 定时刷新定时器
-  
-  // 侧边面板相关
-  late AnimationController _drawerController;
-  late Animation<Offset> _drawerAnimation;
-  bool _isDrawerOpen = false;  // 初始值，实际由设置决定
 
   @override
   void initState() {
     super.initState();
-    
-    // 初始化侧边面板动画控制器
-    _drawerController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    
-    _drawerAnimation = Tween<Offset>(
-      begin: const Offset(-1.0, 0.0),  // 从左侧隐藏
-      end: Offset.zero,  // 显示在屏幕上
-    ).animate(CurvedAnimation(
-      parent: _drawerController,
-      curve: Curves.easeInOut,
-    ));
-    
-    // 根据设置决定是否展开侧边面板
-    _loadDrawerSetting();
     
     // 注册消息监听器
     _apiService.addMessageListener(_onWebSocketMessage);
@@ -63,46 +39,16 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
     // 启动定时器：每8秒自动刷新
     _startAutoRefresh();
   }
-  
-  /// 加载侧边面板设置
-  Future<void> _loadDrawerSetting() async {
-    final prefs = await SharedPreferences.getInstance();
-    final autoOpen = prefs.getBool('auto_open_drawer') ?? true;  // 默认为 true
-    
-    setState(() {
-      _isDrawerOpen = autoOpen;
-    });
-    
-    // 根据设置决定是否展开
-    if (autoOpen) {
-      _drawerController.forward();
-    }
-  }
 
   @override
   void dispose() {
     // 取消定时器
     _refreshTimer?.cancel();
     
-    // 释放动画控制器
-    _drawerController.dispose();
-    
     // 移除消息监听器
     _apiService.removeMessageListener(_onWebSocketMessage);
     
     super.dispose();
-  }
-  
-  /// 切换侧边面板
-  void _toggleDrawer() {
-    setState(() {
-      if (_isDrawerOpen) {
-        _drawerController.reverse();
-      } else {
-        _drawerController.forward();
-      }
-      _isDrawerOpen = !_isDrawerOpen;
-    });
   }
 
   /// 启动自动刷新定时器
@@ -274,44 +220,20 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
     );
 
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          // 主内容区域
-          Column(
-            children: [
-              // 顶部用户头像区域（包含状态栏）
-              _buildHeader(context),
-              // 聊天列表（包含下拉刷新）
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadConversationList,
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _conversationList.isEmpty
-                          ? _buildEmptyState()
-                          : _buildConversationList(),
-                ),
-              ),
-            ],
-          ),
-          
-          // 遮罩层（当侧边面板打开时显示）
-          if (_isDrawerOpen)
-            GestureDetector(
-              onTap: _toggleDrawer,
-              child: AnimatedOpacity(
-                opacity: _isDrawerOpen ? 0.5 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  color: Colors.black,
-                ),
-              ),
+          // 顶部用户头像区域（包含状态栏）
+          _buildHeader(context),
+          // 聊天列表（包含下拉刷新）
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadConversationList,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _conversationList.isEmpty
+                      ? _buildEmptyState()
+                      : _buildConversationList(),
             ),
-          
-          // 左侧滑出的个人中心面板
-          SlideTransition(
-            position: _drawerAnimation,
-            child: _buildProfileDrawer(),
           ),
         ],
       ),
@@ -380,22 +302,20 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
                 ),
               ),
               const SizedBox(width: 4),
-              // 用户头像（可点击）- 大圆形设计
-              GestureDetector(
-                onTap: _toggleDrawer,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Theme.of(context).primaryColor.withOpacity(0.2),
-                      width: 2,
-                    ),
+              // 用户头像 - 大圆形设计（仅展示，不可点击）
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    width: 2,
                   ),
-                  child: user?.avatarUrl != null
-                      ? CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: ClipOval(
+                ),
+                child: user?.avatarUrl != null
+                    ? CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        child: ClipOval(
                             child: CachedNetworkImage(
                               imageUrl: user!.avatarUrl!,
                               width: 40,
@@ -427,24 +347,23 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                        )
-                      : CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Text(
-                            user?.nickname.isNotEmpty == true
-                                ? user!.nickname[0].toUpperCase()
-                                : user?.username[0].toUpperCase() ?? '?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                         ),
-                ),
+                      ),
+                    )
+                  : CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      child: Text(
+                        user?.nickname.isNotEmpty == true
+                            ? user!.nickname[0].toUpperCase()
+                            : user?.username[0].toUpperCase() ?? '?',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
               ),
             ],
           ),
@@ -935,25 +854,5 @@ class _ChatListPageState extends State<ChatListPage> with SingleTickerProviderSt
     }
   }
 
-  /// 构建左侧滑出的个人中心面板
-  Widget _buildProfileDrawer() {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.75,  // 宽度为屏幕的75%
-      height: MediaQuery.of(context).size.height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(2, 0),
-          ),
-        ],
-      ),
-      child: ProfilePage(
-        onClose: _toggleDrawer,  // 传递关闭回调
-      ),
-    );
-  }
 }
 

@@ -3,6 +3,7 @@ import 'home/home_dashboard_page.dart';
 import 'chat/chat_list_page.dart';
 import 'friend/friend_list_page.dart';
 import 'workspace/workspace_page.dart';
+import 'profile/profile_page.dart';
 import 'package:package_im/services/api_service.dart';
 
 /// 主页（底部导航栏）
@@ -25,6 +26,7 @@ class _HomePageState extends State<HomePage> {
     ChatListPage(),
     FriendListPage(),
     WorkspacePage(),
+    ProfilePage(),
   ];
 
   @override
@@ -95,6 +97,11 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.work_outline),
             activeIcon: Icon(Icons.work),
             label: '工作台',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: '我的',
           ),
         ],
       ),

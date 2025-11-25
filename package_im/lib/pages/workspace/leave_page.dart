@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
+import '../../services/api_service.dart';
+import '../../models/leave.dart';
 
 /// 请假页面
 class LeavePage extends StatefulWidget {
@@ -13,6 +15,7 @@ class LeavePage extends StatefulWidget {
 class _LeavePageState extends State<LeavePage> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
+  final _apiService = ApiService();
   
   // 请假类型
   String _selectedLeaveType = '事假';
@@ -43,7 +46,7 @@ class _LeavePageState extends State<LeavePage> {
           : (_endDate ?? _startDate ?? DateTime.now()),
       firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      locale: const Locale('zh', 'CN'),
+      // locale 不需要单独设置，会使用 MaterialApp 配置的默认 locale
     );
     
     if (picked != null) {
@@ -125,18 +128,105 @@ class _LeavePageState extends State<LeavePage> {
     }
 
     try {
-      EasyLoading.show(status: '提交中...');
+      // 转换请假类型
+      final leaveType = LeaveType.fromDescription(_selectedLeaveType);
       
-      // TODO: 调用API提交请假申请
-      await Future.delayed(const Duration(seconds: 2));
+      // 构建开始和结束时间（ISO 8601格式）
+      DateTime startDateTime;
+      DateTime endDateTime;
       
-      EasyLoading.dismiss();
-      EasyLoading.showSuccess('请假申请已提交');
+      if (_durationType == '全天') {
+        // 全天：开始时间为当天9:00，结束时间为当天18:00
+        startDateTime = DateTime(
+          _startDate!.year,
+          _startDate!.month,
+          _startDate!.day,
+          9,
+          0,
+        );
+        endDateTime = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          18,
+          0,
+        );
+      } else if (_durationType == '上午') {
+        // 上午：开始时间为当天9:00，结束时间为当天12:00
+        startDateTime = DateTime(
+          _startDate!.year,
+          _startDate!.month,
+          _startDate!.day,
+          9,
+          0,
+        );
+        endDateTime = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          12,
+          0,
+        );
+      } else if (_durationType == '下午') {
+        // 下午：开始时间为当天14:00，结束时间为当天18:00
+        startDateTime = DateTime(
+          _startDate!.year,
+          _startDate!.month,
+          _startDate!.day,
+          14,
+          0,
+        );
+        endDateTime = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          18,
+          0,
+        );
+      } else {
+        // 自定义时间
+        startDateTime = DateTime(
+          _startDate!.year,
+          _startDate!.month,
+          _startDate!.day,
+          _startTime.hour,
+          _startTime.minute,
+        );
+        endDateTime = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          _endTime.hour,
+          _endTime.minute,
+        );
+      }
       
-      // 延迟返回
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        Navigator.pop(context);
+      // 验证时间
+      if (endDateTime.isBefore(startDateTime)) {
+        EasyLoading.showError('结束时间不能早于开始时间');
+        return;
+      }
+      
+      // 调用API提交请假申请
+      final response = await _apiService.submitLeave(
+        leaveType: leaveType.value,
+        startTime: startDateTime.toIso8601String(),
+        endTime: endDateTime.toIso8601String(),
+        reason: _reasonController.text.trim(),
+      );
+      
+      if (response.success) {
+        EasyLoading.showSuccess('请假申请已提交');
+        
+        // 延迟返回，并返回true表示提交成功
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else {
+        EasyLoading.showError(response.message.isNotEmpty 
+            ? response.message 
+            : '提交失败，请重试');
       }
     } catch (e) {
       EasyLoading.showError('提交失败: $e');

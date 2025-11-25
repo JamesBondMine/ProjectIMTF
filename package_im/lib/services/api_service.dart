@@ -473,6 +473,26 @@ class ApiService {
     }
   }
 
+  /// 检查好友关系
+  Future<ApiResponse<bool>> checkFriend(int userId) async {
+    try {
+      debugPrint('检查好友关系: userId=$userId');
+      
+      final response = await _httpManager.get<bool>(
+        ApiConfig.checkFriendPath(userId),
+      );
+      
+      if (response.success) {
+        debugPrint('好友关系检查成功: ${response.data}');
+      }
+      
+      return response;
+    } catch (e) {
+      debugPrint('检查好友关系异常: $e');
+      rethrow;
+    }
+  }
+
   /// 添加好友
   Future<ApiResponse<dynamic>> addFriend({
     required int friendId,
@@ -801,6 +821,39 @@ class ApiService {
       return response;
     } catch (e) {
       debugPrint('获取用户部门信息异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 提交请假申请
+  Future<ApiResponse<dynamic>> submitLeave({
+    required String leaveType,
+    required String startTime,
+    required String endTime,
+    required String reason,
+  }) async {
+    try {
+      debugPrint('提交请假申请: type=$leaveType, start=$startTime, end=$endTime');
+
+      final response = await _httpManager.post<dynamic>(
+        ApiConfig.submitLeavePath,
+        data: {
+          'leaveType': leaveType,
+          'startTime': startTime,
+          'endTime': endTime,
+          'reason': reason,
+        },
+        showLoading: true,
+        fromJson: (json) => json,
+      );
+
+      if (response.success) {
+        debugPrint('请假申请提交成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('提交请假申请异常: $e');
       rethrow;
     }
   }
@@ -1140,6 +1193,36 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('处理 WebSocket 消息失败: $e');
+    }
+  }
+
+  // ==================== 待办/已办 API ====================
+  
+  /// 获取待办列表
+  Future<ApiResponse<Map<String, dynamic>>> getPendingTasks({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      final path = ApiConfig.getPendingTasksPath(page: page, size: size);
+      return await _httpManager.get<Map<String, dynamic>>(path);
+    } catch (e) {
+      debugPrint('获取待办列表失败: $e');
+      rethrow;
+    }
+  }
+  
+  /// 获取已办列表
+  Future<ApiResponse<Map<String, dynamic>>> getDoneTasks({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      final path = ApiConfig.getDoneTasksPath(page: page, size: size);
+      return await _httpManager.get<Map<String, dynamic>>(path);
+    } catch (e) {
+      debugPrint('获取已办列表失败: $e');
+      rethrow;
     }
   }
 }
