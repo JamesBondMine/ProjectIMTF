@@ -102,13 +102,41 @@ class ApiConfig {
   // 提交请假申请
   static const String submitLeavePath = '/api/workflow/leave';
   
-  // 获取待办列表（分页）
-  static String getPendingTasksPath({int page = 0, int size = 10}) => 
-      '/api/workflow/approval/pending?page=$page&size=$size';
+  // 获取请假详情
+  static String getLeaveDetailPath(int leaveId) => '/api/workflow/leave/$leaveId';
   
-  // 获取已办列表（分页）
-  static String getDoneTasksPath({int page = 0, int size = 10}) => 
-      '/api/workflow/approval/done?page=$page&size=$size';
+  // 审批请假
+  static String approveLeaveePath(int leaveId) => '/api/workflow/approval/leave/$leaveId';
+  
+  // 审批周报
+  static String approveWeeklyReportPath(int reportId) => '/api/workflow/approval/weekly-report/$reportId';
+  
+  // 审批月报
+  static String approveMonthlyReportPath(int reportId) => '/api/workflow/approval/monthly-report/$reportId';
+  
+  // 获取待办/已办列表（分页）
+  static String getTasksPath({required bool isPending, int page = 0, int size = 10}) => 
+      '/api/workflow/approval/pending?isPending=$isPending&page=$page&size=$size';
+  
+  // 获取我的周报列表（分页）
+  static String getMyWeeklyReportsPath({int page = 0, int size = 10}) => 
+      '/api/workflow/weekly-report/my?page=$page&size=$size';
+  
+  // 创建/提交周报
+  static const String createWeeklyReportPath = '/api/workflow/weekly-report';
+  
+  // 获取周报详情
+  static String getWeeklyReportDetailPath(int reportId) => '/api/workflow/weekly-report/$reportId';
+  
+  // 获取我的月报列表（分页）
+  static String getMyMonthlyReportsPath({int page = 0, int size = 10}) => 
+      '/api/workflow/monthly-report/my?page=$page&size=$size';
+  
+  // 创建/提交月报
+  static const String createMonthlyReportPath = '/api/workflow/monthly-report';
+  
+  // 获取月报详情
+  static String getMonthlyReportDetailPath(int reportId) => '/api/workflow/monthly-report/$reportId';
   
   // 请求头
   static Map<String, dynamic> get headers => {

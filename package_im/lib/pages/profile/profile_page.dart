@@ -72,103 +72,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _apiService.currentUser;
-    
     // 判断是否作为侧边面板使用
     final isDrawerMode = widget.onClose != null;
 
     return Scaffold(
-      appBar: isDrawerMode ? null : AppBar(
-        title: const Text('个人信息'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
       body: Column(
         children: [
           // 如果是侧边面板模式，添加顶部栏
           if (isDrawerMode) _buildDrawerHeader(),
+          // 如果不是侧边面板模式，显示美化的头部
+          if (!isDrawerMode) _buildBeautifulHeader(),
           // 可滚动内容
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-            // 顶部用户信息卡片
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
-              ),
-              child: Column(
-                children: [
-                  // 头像（可点击上传）
-                  GestureDetector(
-                    onTap: _showAvatarOptions,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Theme.of(context).primaryColor,
-                          backgroundImage: user?.avatarUrl != null
-                              ? NetworkImage(user!.avatarUrl!)
-                              : null,
-                          child: user?.avatarUrl == null
-                              ? Text(
-                                  user?.nickname.isNotEmpty == true
-                                      ? user!.nickname[0].toUpperCase()
-                                      : user?.username[0].toUpperCase() ?? '?',
-                                  style: const TextStyle(
-                                    fontSize: 40,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        // 相机图标
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 昵称
-                  Text(
-                    user?.nickname ?? user?.username ?? '未知用户',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // 账号
-                  Text(
-                    user?.username ?? '',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 16),
             // 信息列表
             _buildInfoSection(),
@@ -245,6 +163,221 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: widget.onClose,
             icon: const Icon(Icons.close, color: Colors.white),
             tooltip: '关闭',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建美化的头部
+  Widget _buildBeautifulHeader() {
+    final user = _apiService.currentUser;
+    
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.85),
+            Theme.of(context).primaryColor.withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // 装饰性圆圈 - 左上角
+          Positioned(
+            top: -50,
+            left: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          // 装饰性圆圈 - 右上角
+          Positioned(
+            top: 50,
+            right: -30,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          // 装饰性圆圈 - 左下角
+          Positioned(
+            bottom: -40,
+            left: 20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          // 主要内容
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+              child: Column(
+                children: [
+                  // 头像（可点击上传）
+                  GestureDetector(
+                    onTap: _showAvatarOptions,
+                    child: Stack(
+                      children: [
+                        // 外圈装饰环
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                        // 头像主体
+                        Positioned.fill(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 25,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 62,
+                                backgroundColor: Colors.white,
+                                child: CircleAvatar(
+                                  radius: 58,
+                                  backgroundColor: Colors.white.withOpacity(0.3),
+                                  backgroundImage: user?.avatarUrl != null
+                                      ? NetworkImage(user!.avatarUrl!)
+                                      : null,
+                                  child: user?.avatarUrl == null
+                                      ? Text(
+                                          user?.nickname.isNotEmpty == true
+                                              ? user!.nickname[0].toUpperCase()
+                                              : user?.username[0].toUpperCase() ?? '?',
+                                          style: TextStyle(
+                                            fontSize: 52,
+                                            color: Theme.of(context).primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 相机图标
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.camera_alt_rounded,
+                              size: 20,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // 昵称
+                  Text(
+                    user?.nickname ?? user?.username ?? '未知用户',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.8,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // 账号标签
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.alternate_email,
+                          size: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          user?.username ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

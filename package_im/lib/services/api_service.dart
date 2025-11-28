@@ -825,6 +825,294 @@ class ApiService {
     }
   }
 
+  /// 获取请假详情
+  Future<ApiResponse<Map<String, dynamic>>> getLeaveDetail(int leaveId) async {
+    try {
+      debugPrint('获取请假详情: leaveId=$leaveId');
+
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        ApiConfig.getLeaveDetailPath(leaveId),
+        showLoading: true,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取请假详情成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取请假详情异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 审批请假
+  Future<ApiResponse<String>> approveLeave({
+    required int leaveId,
+    required String result,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('审批请假: leaveId=$leaveId, result=$result');
+
+      final response = await _httpManager.post<String>(
+        ApiConfig.approveLeaveePath(leaveId),
+        data: {
+          'result': result,
+          'comment': comment,
+        },
+        showLoading: true,
+        fromJson: (json) => json.toString(),
+      );
+
+      if (response.success) {
+        debugPrint('审批请假成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('审批请假异常: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== 周报 API ====================
+  
+  /// 获取我的周报列表（分页）
+  Future<ApiResponse<Map<String, dynamic>>> getMyWeeklyReports({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      debugPrint('获取我的周报列表: page=$page, size=$size');
+
+      final path = ApiConfig.getMyWeeklyReportsPath(page: page, size: size);
+      
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        path,
+        showLoading: false,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取周报列表成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取周报列表失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 创建/提交周报
+  Future<ApiResponse<Map<String, dynamic>>> createWeeklyReport({
+    required String title,
+    required String startTime,
+    required String endTime,
+    required String thisWeekContent,
+    required String nextWeekPlan,
+    String? remark,
+  }) async {
+    try {
+      debugPrint('创建周报: title=$title, startTime=$startTime, endTime=$endTime');
+
+      final response = await _httpManager.post<Map<String, dynamic>>(
+        ApiConfig.createWeeklyReportPath,
+        data: {
+          'title': title,
+          'startTime': startTime,
+          'endTime': endTime,
+          'thisWeekContent': thisWeekContent,
+          'nextWeekPlan': nextWeekPlan,
+          if (remark != null && remark.isNotEmpty) 'remark': remark,
+        },
+        showLoading: true,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('创建周报成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('创建周报失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取周报详情
+  Future<ApiResponse<Map<String, dynamic>>> getWeeklyReportDetail(int reportId) async {
+    try {
+      debugPrint('获取周报详情: reportId=$reportId');
+
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        ApiConfig.getWeeklyReportDetailPath(reportId),
+        showLoading: true,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取周报详情成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取周报详情异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 审批周报
+  Future<ApiResponse<String>> approveWeeklyReport({
+    required int reportId,
+    required String result,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('审批周报: reportId=$reportId, result=$result');
+
+      final response = await _httpManager.post<String>(
+        ApiConfig.approveWeeklyReportPath(reportId),
+        data: {
+          'result': result,
+          'comment': comment,
+        },
+        showLoading: true,
+        fromJson: (json) => json.toString(),
+      );
+
+      if (response.success) {
+        debugPrint('审批周报成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('审批周报异常: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== 月报 API ====================
+  
+  /// 获取我的月报列表（分页）
+  Future<ApiResponse<Map<String, dynamic>>> getMyMonthlyReports({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      debugPrint('获取我的月报列表: page=$page, size=$size');
+
+      final path = ApiConfig.getMyMonthlyReportsPath(page: page, size: size);
+      
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        path,
+        showLoading: false,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取月报列表成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取月报列表失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 创建/提交月报
+  Future<ApiResponse<Map<String, dynamic>>> createMonthlyReport({
+    required String title,
+    required String startTime,
+    required String endTime,
+    required String thisMonthContent,
+    required String nextMonthPlan,
+    String? remark,
+  }) async {
+    try {
+      debugPrint('创建月报: title=$title, startTime=$startTime, endTime=$endTime');
+
+      final response = await _httpManager.post<Map<String, dynamic>>(
+        ApiConfig.createMonthlyReportPath,
+        data: {
+          'title': title,
+          'startTime': startTime,
+          'endTime': endTime,
+          'thisMonthContent': thisMonthContent,
+          'nextMonthPlan': nextMonthPlan,
+          if (remark != null && remark.isNotEmpty) 'remark': remark,
+        },
+        showLoading: true,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('创建月报成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('创建月报失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取月报详情
+  Future<ApiResponse<Map<String, dynamic>>> getMonthlyReportDetail(int reportId) async {
+    try {
+      debugPrint('获取月报详情: reportId=$reportId');
+
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        ApiConfig.getMonthlyReportDetailPath(reportId),
+        showLoading: true,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.success) {
+        debugPrint('获取月报详情成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('获取月报详情异常: $e');
+      rethrow;
+    }
+  }
+
+  /// 审批月报
+  Future<ApiResponse<String>> approveMonthlyReport({
+    required int reportId,
+    required String result,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('审批月报: reportId=$reportId, result=$result');
+
+      final response = await _httpManager.post<String>(
+        ApiConfig.approveMonthlyReportPath(reportId),
+        data: {
+          'result': result,
+          'comment': comment,
+        },
+        showLoading: true,
+        fromJson: (json) => json.toString(),
+      );
+
+      if (response.success) {
+        debugPrint('审批月报成功');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('审批月报异常: $e');
+      rethrow;
+    }
+  }
+
   /// 提交请假申请
   Future<ApiResponse<dynamic>> submitLeave({
     required String leaveType,
@@ -1198,32 +1486,53 @@ class ApiService {
 
   // ==================== 待办/已办 API ====================
   
-  /// 获取待办列表
-  Future<ApiResponse<Map<String, dynamic>>> getPendingTasks({
+  /// 获取任务列表（待办或已办）
+  /// [isPending] true-待办，false-已办
+  Future<ApiResponse<Map<String, dynamic>>> getTasks({
+    required bool isPending,
     int page = 0,
     int size = 10,
   }) async {
     try {
-      final path = ApiConfig.getPendingTasksPath(page: page, size: size);
-      return await _httpManager.get<Map<String, dynamic>>(path);
+      debugPrint('获取${isPending ? '待办' : '已办'}列表: page=$page, size=$size');
+      
+      final path = ApiConfig.getTasksPath(
+        isPending: isPending,
+        page: page,
+        size: size,
+      );
+      
+      final response = await _httpManager.get<Map<String, dynamic>>(
+        path,
+        showLoading: false,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      
+      if (response.success) {
+        debugPrint('获取${isPending ? '待办' : '已办'}列表成功');
+      }
+      
+      return response;
     } catch (e) {
-      debugPrint('获取待办列表失败: $e');
+      debugPrint('获取${isPending ? '待办' : '已办'}列表失败: $e');
       rethrow;
     }
   }
   
-  /// 获取已办列表
+  /// 获取待办列表（兼容旧方法）
+  Future<ApiResponse<Map<String, dynamic>>> getPendingTasks({
+    int page = 0,
+    int size = 10,
+  }) async {
+    return getTasks(isPending: true, page: page, size: size);
+  }
+  
+  /// 获取已办列表（兼容旧方法）
   Future<ApiResponse<Map<String, dynamic>>> getDoneTasks({
     int page = 0,
     int size = 10,
   }) async {
-    try {
-      final path = ApiConfig.getDoneTasksPath(page: page, size: size);
-      return await _httpManager.get<Map<String, dynamic>>(path);
-    } catch (e) {
-      debugPrint('获取已办列表失败: $e');
-      rethrow;
-    }
+    return getTasks(isPending: false, page: page, size: size);
   }
 }
 

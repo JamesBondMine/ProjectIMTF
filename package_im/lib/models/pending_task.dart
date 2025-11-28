@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// 待办任务类型
 enum TaskType {
   LEAVE,      // 请假
-  WEEKLY,     // 周报
-  MONTHLY,    // 月报
+  WEEKLY_REPORT,     // 周报
+  MONTHLY_REPORT,    // 月报
   APPROVAL,   // 审批
 }
 
@@ -25,9 +25,9 @@ extension TaskTypeExtension on TaskType {
     switch (this) {
       case TaskType.LEAVE:
         return '请假';
-      case TaskType.WEEKLY:
+      case TaskType.WEEKLY_REPORT:
         return '周报';
-      case TaskType.MONTHLY:
+      case TaskType.MONTHLY_REPORT:
         return '月报';
       case TaskType.APPROVAL:
         return '审批';
@@ -38,9 +38,9 @@ extension TaskTypeExtension on TaskType {
     switch (this) {
       case TaskType.LEAVE:
         return Icons.event_busy;
-      case TaskType.WEEKLY:
+      case TaskType.WEEKLY_REPORT:
         return Icons.calendar_view_week;
-      case TaskType.MONTHLY:
+      case TaskType.MONTHLY_REPORT:
         return Icons.calendar_month;
       case TaskType.APPROVAL:
         return Icons.approval;
@@ -51,9 +51,9 @@ extension TaskTypeExtension on TaskType {
     switch (this) {
       case TaskType.LEAVE:
         return Colors.orange;
-      case TaskType.WEEKLY:
+      case TaskType.WEEKLY_REPORT:
         return Colors.blue;
-      case TaskType.MONTHLY:
+      case TaskType.MONTHLY_REPORT:
         return Colors.green;
       case TaskType.APPROVAL:
         return Colors.purple;

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:package_im/services/api_service.dart';
 import 'package:package_im/models/pending_task.dart';
+import 'package:package_im/pages/home/leave_detail_page.dart';
+import 'package:package_im/pages/home/weekly_report_detail_page.dart';
+import 'package:package_im/pages/home/monthly_report_detail_page.dart';
 
 /// 首页
 class HomeDashboardPage extends StatefulWidget {
@@ -74,7 +77,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     if (!_hasMoreTodo && !isRefresh) return;
     
     try {
-      final response = await _apiService.getPendingTasks(
+      final response = await _apiService.getTasks(
+        isPending: true,
         page: isRefresh ? 0 : _todoPage,
         size: _pageSize,
       );
@@ -114,7 +118,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     if (!_hasMoreDone && !isRefresh) return;
     
     try {
-      final response = await _apiService.getDoneTasks(
+      final response = await _apiService.getTasks(
+        isPending: false,
         page: isRefresh ? 0 : _donePage,
         size: _pageSize,
       );
@@ -151,67 +156,190 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
 
   /// 处理待办事项
   Future<void> _handleTodoItem(PendingTask item) async {
-    // TODO: 根据类型跳转到对应的详情页面
-    EasyLoading.showInfo('查看${item.title}详情');
+    // 根据类型跳转到对应的详情页面
+    bool? needRefresh;
+    
+    switch (item.taskType) {
+      case TaskType.LEAVE:
+        // 跳转到请假详情页面
+        if (mounted) {
+          needRefresh = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => LeaveDetailPage(leaveId: item.taskId),
+            ),
+          );
+        }
+        break;
+      case TaskType.WEEKLY_REPORT:
+        // 跳转到周报详情页面
+        if (mounted) {
+          needRefresh = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => WeeklyReportDetailPage(
+                reportId: item.taskId,
+                taskData: item,
+              ),
+            ),
+          );
+        }
+        break;
+      case TaskType.MONTHLY_REPORT:
+        // 跳转到月报详情页面
+        if (mounted) {
+          needRefresh = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => MonthlyReportDetailPage(
+                reportId: item.taskId,
+                taskData: item,
+              ),
+            ),
+          );
+        }
+        break;
+      case TaskType.APPROVAL:
+        // TODO: 跳转到审批详情页面
+        EasyLoading.showInfo('查看审批详情');
+        break;
+    }
+    
+    // 如果需要刷新，重新加载待办列表
+    if (needRefresh == true && mounted) {
+      _loadData();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('首页'),
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.normal,
-          ),
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('待办'),
-                  if (_todoList.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${_todoList.length}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
-                      ),
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 美化的 TabBar 区域
+            Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.grey[600],
+                labelStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.normal,
+                ),
+                padding: const EdgeInsets.all(4),
+                tabs: [
+                  Tab(
+                    height: 44,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.pending_actions, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('待办'),
+                        if (_todoList.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${_todoList.length}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    height: 44,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('已办'),
+                        if (_doneList.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${_doneList.length}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Tab(text: '已办'),
+            // TabBarView
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTodoList(),
+                  _buildDoneList(),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTodoList(),
-          _buildDoneList(),
-        ],
       ),
     );
   }
@@ -233,7 +361,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: _todoList.length,
         itemBuilder: (context, index) {
           return _buildTodoCard(_todoList[index]);
@@ -259,7 +387,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: _doneList.length,
         itemBuilder: (context, index) {
           return _buildDoneCard(_doneList[index]);

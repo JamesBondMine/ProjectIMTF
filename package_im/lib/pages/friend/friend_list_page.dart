@@ -171,58 +171,22 @@ class _FriendListPageState extends State<FriendListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: '搜索好友...',
-                  hintStyle: TextStyle(color: Colors.white70),
-                  border: InputBorder.none,
-                ),
-              )
-            : const Text('好友'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          if (_isSearching)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: () {
-                setState(() {
-                  _searchController.clear();
-                  _isSearching = false;
-                  _filteredFriendList = _friendList;
-                });
-              },
-              tooltip: '取消搜索',
-            )
-          else ...[
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
-                });
-              },
-              tooltip: '搜索',
-            ),
-            IconButton(
-              icon: const Icon(Icons.person_add),
-              onPressed: _navigateToAddFriend,
-              tooltip: '添加好友',
-            ),
-          ],
+      body: Column(
+        children: [
+          // 渐变美化头部
+          _buildBeautifulHeader(context),
+          // 主体内容
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _friendList.isEmpty
+                    ? _buildEmptyState()
+                    : _filteredFriendList.isEmpty
+                        ? _buildSearchEmptyState()
+                        : _buildFriendList(),
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _friendList.isEmpty
-              ? _buildEmptyState()
-              : _filteredFriendList.isEmpty
-                  ? _buildSearchEmptyState()
-                  : _buildFriendList(),
       floatingActionButton: _isSearching
           ? null
           : FloatingActionButton(
@@ -230,6 +194,175 @@ class _FriendListPageState extends State<FriendListPage> {
               tooltip: '添加好友',
               child: const Icon(Icons.add),
             ),
+    );
+  }
+
+  /// 构建美化的头部
+  Widget _buildBeautifulHeader(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.85),
+            Theme.of(context).primaryColor.withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // 装饰性圆圈
+          Positioned(
+            top: -40,
+            left: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            right: 20,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          // 主要内容
+          SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 顶部标题和按钮行
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Row(
+                    children: [
+                      // 大标题
+                      const Text(
+                        '好友',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                          height: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      // 搜索按钮
+                      if (!_isSearching)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.search_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isSearching = true;
+                              });
+                            },
+                            tooltip: '搜索',
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      // 添加好友按钮
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.person_add_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          onPressed: _navigateToAddFriend,
+                          tooltip: '添加好友',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 搜索框（展开时显示）
+                if (_isSearching)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: '搜索好友名称、账号...',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: Colors.grey[600],
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                _isSearching = false;
+                                _filteredFriendList = _friendList;
+                              });
+                            },
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

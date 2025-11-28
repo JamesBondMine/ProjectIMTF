@@ -240,132 +240,170 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-  /// 顶部头像区域（包含状态栏）- 极简白色设计
+  /// 顶部头像区域（包含状态栏）- 渐变美化设计
   Widget _buildHeader(BuildContext context) {
     final user = _apiService.currentUser;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
-      padding: EdgeInsets.only(
-        top: statusBarHeight + 12,
-        left: 20,
-        right: 20,
-        bottom: 16,
-      ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey[200]!,
-            width: 1,
-          ),
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withOpacity(0.85),
+            Theme.of(context).primaryColor.withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              // 大标题
-              const Text(
-                '消息',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                  height: 1.2,
-                ),
+          // 装饰性圆圈
+          Positioned(
+            top: -30,
+            right: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
               ),
-              const Spacer(),
-              // 添加好友按钮 - 圆形图标
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.add_rounded,
-                    color: Theme.of(context).primaryColor,
-                    size: 26,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const AddFriendPage(),
-                      ),
-                    ).then((_) {
-                      _loadConversationList();
-                    });
-                  },
-                  tooltip: '添加好友',
-                ),
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: 40,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
               ),
-              const SizedBox(width: 4),
-              // 用户头像 - 大圆形设计（仅展示，不可点击）
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
-                    width: 2,
+            ),
+          ),
+          // 主要内容
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Row(
+                children: [
+                  // 大标题
+                  const Text(
+                    '消息',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                      height: 1.2,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                child: user?.avatarUrl != null
-                    ? CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                        child: ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: user!.avatarUrl!,
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                child: Center(
-                                  child: Text(
-                                    user.nickname.isNotEmpty
-                                        ? user.nickname[0].toUpperCase()
-                                        : user.username[0].toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Theme.of(context).primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                        ),
-                      ),
-                    )
-                  : CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Text(
-                        user?.nickname.isNotEmpty == true
-                            ? user!.nickname[0].toUpperCase()
-                            : user?.username[0].toUpperCase() ?? '?',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const Spacer(),
+                  // 添加好友按钮
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
                       ),
                     ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AddFriendPage(),
+                          ),
+                        ).then((_) {
+                          _loadConversationList();
+                        });
+                      },
+                      tooltip: '添加好友',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 用户头像
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.4),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: user?.avatarUrl != null
+                        ? CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.white,
+                            child: ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: user!.avatarUrl!,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.white.withOpacity(0.8),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Theme.of(context).primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    color: Colors.white,
+                                    child: Center(
+                                      child: Text(
+                                        user.nickname.isNotEmpty
+                                            ? user.nickname[0].toUpperCase()
+                                            : user.username[0].toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Theme.of(context).primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.white,
+                          child: Text(
+                            user?.nickname.isNotEmpty == true
+                                ? user!.nickname[0].toUpperCase()
+                                : user?.username[0].toUpperCase() ?? '?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),

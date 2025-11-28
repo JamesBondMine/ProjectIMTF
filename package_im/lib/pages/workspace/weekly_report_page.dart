@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
+import 'package:package_im/services/api_service.dart';
+import 'package:package_im/models/weekly_report.dart';
+import 'package:package_im/models/pending_task.dart';
 
 /// 周报页面
 class WeeklyReportPage extends StatefulWidget {
@@ -11,8 +14,14 @@ class WeeklyReportPage extends StatefulWidget {
 }
 
 class _WeeklyReportPageState extends State<WeeklyReportPage> {
-  final List<WeeklyReport> _reports = [];
+  final ApiService _apiService = ApiService();
+  final List<WeeklyReportModel> _reports = [];
   bool _isLoading = false;
+  
+  // 分页参数
+  int _currentPage = 0;
+  final int _pageSize = 10;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -21,53 +30,50 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
   }
 
   /// 加载周报列表
-  Future<void> _loadReports() async {
+  Future<void> _loadReports({bool isRefresh = false}) async {
+    if (!_hasMore && !isRefresh) return;
+    
     setState(() {
       _isLoading = true;
+      if (isRefresh) {
+        _currentPage = 0;
+        _hasMore = true;
+      }
     });
 
     try {
-      // TODO: 调用API获取周报列表
-      await Future.delayed(const Duration(seconds: 1));
+      final response = await _apiService.getMyWeeklyReports(
+        page: isRefresh ? 0 : _currentPage,
+        size: _pageSize,
+      );
 
-      // 模拟数据
-      setState(() {
-        _reports.clear();
-        _reports.addAll([
-          WeeklyReport(
-            id: 1,
-            weekNumber: 47,
-            year: 2024,
-            startDate: DateTime(2024, 11, 18),
-            endDate: DateTime(2024, 11, 24),
-            title: '第47周工作周报',
-            status: ReportStatus.approved,
-            submitTime: DateTime.now().subtract(const Duration(days: 2)),
-          ),
-          WeeklyReport(
-            id: 2,
-            weekNumber: 46,
-            year: 2024,
-            startDate: DateTime(2024, 11, 11),
-            endDate: DateTime(2024, 11, 17),
-            title: '第46周工作周报',
-            status: ReportStatus.pending,
-            submitTime: DateTime.now().subtract(const Duration(days: 9)),
-          ),
-          WeeklyReport(
-            id: 3,
-            weekNumber: 45,
-            year: 2024,
-            startDate: DateTime(2024, 11, 4),
-            endDate: DateTime(2024, 11, 10),
-            title: '第45周工作周报',
-            status: ReportStatus.draft,
-            submitTime: null,
-          ),
-        ]);
-      });
+      if (response.success && response.data != null) {
+        final pageData = PageData.fromJson(
+          response.data!,
+          (json) => WeeklyReportModel.fromJson(json),
+        );
+
+        setState(() {
+          if (isRefresh) {
+            _reports.clear();
+            _currentPage = 0;
+          }
+          _reports.addAll(pageData.content);
+          _hasMore = pageData.number < pageData.totalPages - 1;
+          if (!isRefresh) {
+            _currentPage++;
+          }
+        });
+      } else {
+        if (!isRefresh) {
+          EasyLoading.showError(response.message);
+        }
+      }
     } catch (e) {
-      EasyLoading.showError('加载失败: $e');
+      debugPrint('加载周报列表失败: $e');
+      if (!isRefresh) {
+        EasyLoading.showError('加载失败: $e');
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -90,17 +96,9 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
   }
 
   /// 查看/编辑周报
-  void _viewReport(WeeklyReport report) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WeeklyReportEditPage(report: report),
-      ),
-    ).then((result) {
-      if (result == true) {
-        _loadReports();
-      }
-    });
+  void _viewReport(WeeklyReportModel report) {
+    // TODO: 跳转到周报详情/编辑页面
+    EasyLoading.showInfo('周报详情功能开发中');
   }
 
   @override
@@ -122,7 +120,7 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
           : _reports.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
-                  onRefresh: _loadReports,
+                  onRefresh: () => _loadReports(isRefresh: true),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _reports.length,
@@ -140,7 +138,7 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
   }
 
   /// 构建周报卡片
-  Widget _buildReportCard(WeeklyReport report) {
+  Widget _buildReportCard(WeeklyReportModel report) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -201,7 +199,7 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${DateFormat('MM-dd').format(report.startDate)} - ${DateFormat('MM-dd').format(report.endDate)}',
+                            '${_formatDate(report.startTime)} - ${_formatDate(report.endTime)}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -216,17 +214,15 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
                 Row(
                   children: [
                     Icon(
-                      report.submitTime != null
-                          ? Icons.check_circle
-                          : Icons.edit,
+                      report.isDraft ? Icons.edit : Icons.check_circle,
                       size: 14,
                       color: Colors.grey[400],
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      report.submitTime != null
-                          ? '提交于 ${_formatTime(report.submitTime!)}'
-                          : '草稿',
+                      report.isDraft
+                          ? '草稿'
+                          : '提交于 ${_formatTime(report.createdAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -249,27 +245,30 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
   }
 
   /// 构建状态标签
-  Widget _buildStatusBadge(ReportStatus status) {
+  Widget _buildStatusBadge(String status) {
     Color color;
     String text;
 
     switch (status) {
-      case ReportStatus.draft:
+      case 'DRAFT':
         color = Colors.grey;
         text = '草稿';
         break;
-      case ReportStatus.pending:
+      case 'PENDING':
         color = Colors.orange;
         text = '待审批';
         break;
-      case ReportStatus.approved:
+      case 'APPROVED':
         color = Colors.green;
         text = '已通过';
         break;
-      case ReportStatus.rejected:
+      case 'REJECTED':
         color = Colors.red;
         text = '已驳回';
         break;
+      default:
+        color = Colors.grey;
+        text = status;
     }
 
     return Container(
@@ -322,26 +321,41 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
     );
   }
 
-  /// 格式化时间
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
+  /// 格式化日期
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('MM-dd').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}分钟前';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}小时前';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
-    } else {
-      return DateFormat('yyyy-MM-dd').format(time);
+  /// 格式化时间
+  String _formatTime(String dateTimeStr) {
+    try {
+      final time = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final difference = now.difference(time);
+
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}分钟前';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}小时前';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays}天前';
+      } else {
+        return DateFormat('yyyy-MM-dd').format(time);
+      }
+    } catch (e) {
+      return dateTimeStr;
     }
   }
 }
 
 /// 周报编辑页面
 class WeeklyReportEditPage extends StatefulWidget {
-  final WeeklyReport? report;
+  final WeeklyReportModel? report;
 
   const WeeklyReportEditPage({super.key, this.report});
 
@@ -350,6 +364,7 @@ class WeeklyReportEditPage extends StatefulWidget {
 }
 
 class _WeeklyReportEditPageState extends State<WeeklyReportEditPage> {
+  final ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _thisWeekController = TextEditingController();
@@ -366,9 +381,17 @@ class _WeeklyReportEditPageState extends State<WeeklyReportEditPage> {
     _isEditing = widget.report != null;
     if (_isEditing) {
       _titleController.text = widget.report!.title;
-      _startDate = widget.report!.startDate;
-      _endDate = widget.report!.endDate;
-      // TODO: 加载周报详细内容
+      try {
+        _startDate = DateTime.parse(widget.report!.startTime);
+        _endDate = DateTime.parse(widget.report!.endTime);
+      } catch (e) {
+        debugPrint('解析日期失败: $e');
+      }
+      _thisWeekController.text = widget.report!.thisWeekContent;
+      _nextWeekController.text = widget.report!.nextWeekPlan;
+      if (widget.report!.remark != null) {
+        _issuesController.text = widget.report!.remark!;
+      }
     } else {
       // 新建周报，自动设置为当前周
       _autoSetCurrentWeek();
@@ -466,6 +489,11 @@ class _WeeklyReportEditPageState extends State<WeeklyReportEditPage> {
       return;
     }
 
+    if (_startDate == null || _endDate == null) {
+      EasyLoading.showError('请选择周报周期');
+      return;
+    }
+
     if (_thisWeekController.text.trim().isEmpty) {
       EasyLoading.showError('请填写本周工作内容');
       return;
@@ -477,15 +505,27 @@ class _WeeklyReportEditPageState extends State<WeeklyReportEditPage> {
     }
 
     try {
-      EasyLoading.show(status: '提交中...');
+      final response = await _apiService.createWeeklyReport(
+        title: _titleController.text.trim(),
+        startTime: DateFormat('yyyy-MM-dd').format(_startDate!),
+        endTime: DateFormat('yyyy-MM-dd').format(_endDate!),
+        thisWeekContent: _thisWeekController.text.trim(),
+        nextWeekPlan: _nextWeekController.text.trim(),
+        remark: _issuesController.text.trim().isNotEmpty 
+            ? _issuesController.text.trim() 
+            : null,
+      );
 
-      // TODO: 调用API提交周报
-      await Future.delayed(const Duration(seconds: 1));
-
-      EasyLoading.showSuccess('周报已提交');
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        Navigator.pop(context, true);
+      if (response.success) {
+        EasyLoading.showSuccess('周报已提交');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else {
+        EasyLoading.showError(response.message.isNotEmpty
+            ? response.message
+            : '提交失败，请重试');
       }
     } catch (e) {
       EasyLoading.showError('提交失败: $e');
@@ -733,33 +773,3 @@ class _WeeklyReportEditPageState extends State<WeeklyReportEditPage> {
   }
 }
 
-/// 周报状态
-enum ReportStatus {
-  draft,    // 草稿
-  pending,  // 待审批
-  approved, // 已通过
-  rejected, // 已驳回
-}
-
-/// 周报模型
-class WeeklyReport {
-  final int id;
-  final int weekNumber;
-  final int year;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String title;
-  final ReportStatus status;
-  final DateTime? submitTime;
-
-  WeeklyReport({
-    required this.id,
-    required this.weekNumber,
-    required this.year,
-    required this.startDate,
-    required this.endDate,
-    required this.title,
-    required this.status,
-    this.submitTime,
-  });
-}

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
+import 'package:package_im/services/api_service.dart';
+import 'package:package_im/models/monthly_report.dart';
+import 'package:package_im/models/pending_task.dart';
 
 /// 月报页面
 class MonthlyReportPage extends StatefulWidget {
@@ -11,8 +14,14 @@ class MonthlyReportPage extends StatefulWidget {
 }
 
 class _MonthlyReportPageState extends State<MonthlyReportPage> {
-  final List<MonthlyReport> _reports = [];
+  final ApiService _apiService = ApiService();
+  final List<MonthlyReportModel> _reports = [];
   bool _isLoading = false;
+  
+  // 分页参数
+  int _currentPage = 0;
+  final int _pageSize = 10;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -21,47 +30,50 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
   }
 
   /// 加载月报列表
-  Future<void> _loadReports() async {
+  Future<void> _loadReports({bool isRefresh = false}) async {
+    if (!_hasMore && !isRefresh) return;
+    
     setState(() {
       _isLoading = true;
+      if (isRefresh) {
+        _currentPage = 0;
+        _hasMore = true;
+      }
     });
 
     try {
-      // TODO: 调用API获取月报列表
-      await Future.delayed(const Duration(seconds: 1));
+      final response = await _apiService.getMyMonthlyReports(
+        page: isRefresh ? 0 : _currentPage,
+        size: _pageSize,
+      );
 
-      // 模拟数据
-      setState(() {
-        _reports.clear();
-        _reports.addAll([
-          MonthlyReport(
-            id: 1,
-            month: 11,
-            year: 2024,
-            title: '2024年11月工作月报',
-            status: ReportStatus.approved,
-            submitTime: DateTime.now().subtract(const Duration(days: 5)),
-          ),
-          MonthlyReport(
-            id: 2,
-            month: 10,
-            year: 2024,
-            title: '2024年10月工作月报',
-            status: ReportStatus.pending,
-            submitTime: DateTime.now().subtract(const Duration(days: 25)),
-          ),
-          MonthlyReport(
-            id: 3,
-            month: 9,
-            year: 2024,
-            title: '2024年9月工作月报',
-            status: ReportStatus.draft,
-            submitTime: null,
-          ),
-        ]);
-      });
+      if (response.success && response.data != null) {
+        final pageData = PageData.fromJson(
+          response.data!,
+          (json) => MonthlyReportModel.fromJson(json),
+        );
+
+        setState(() {
+          if (isRefresh) {
+            _reports.clear();
+            _currentPage = 0;
+          }
+          _reports.addAll(pageData.content);
+          _hasMore = pageData.number < pageData.totalPages - 1;
+          if (!isRefresh) {
+            _currentPage++;
+          }
+        });
+      } else {
+        if (!isRefresh) {
+          EasyLoading.showError(response.message);
+        }
+      }
     } catch (e) {
-      EasyLoading.showError('加载失败: $e');
+      debugPrint('加载月报列表失败: $e');
+      if (!isRefresh) {
+        EasyLoading.showError('加载失败: $e');
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -84,17 +96,9 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
   }
 
   /// 查看/编辑月报
-  void _viewReport(MonthlyReport report) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MonthlyReportEditPage(report: report),
-      ),
-    ).then((result) {
-      if (result == true) {
-        _loadReports();
-      }
-    });
+  void _viewReport(MonthlyReportModel report) {
+    // TODO: 跳转到月报详情/编辑页面
+    EasyLoading.showInfo('月报详情功能开发中');
   }
 
   @override
@@ -116,7 +120,7 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
           : _reports.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
-                  onRefresh: _loadReports,
+                  onRefresh: () => _loadReports(isRefresh: true),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _reports.length,
@@ -134,7 +138,7 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
   }
 
   /// 构建月报卡片
-  Widget _buildReportCard(MonthlyReport report) {
+  Widget _buildReportCard(MonthlyReportModel report) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -195,7 +199,7 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${report.year}年${report.month}月',
+                            '${_formatDate(report.startTime)} - ${_formatDate(report.endTime)}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -210,17 +214,15 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
                 Row(
                   children: [
                     Icon(
-                      report.submitTime != null
-                          ? Icons.check_circle
-                          : Icons.edit,
+                      report.isDraft ? Icons.edit : Icons.check_circle,
                       size: 14,
                       color: Colors.grey[400],
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      report.submitTime != null
-                          ? '提交于 ${_formatTime(report.submitTime!)}'
-                          : '草稿',
+                      report.isDraft
+                          ? '草稿'
+                          : '提交于 ${_formatTime(report.createdAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -243,27 +245,30 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
   }
 
   /// 构建状态标签
-  Widget _buildStatusBadge(ReportStatus status) {
+  Widget _buildStatusBadge(String status) {
     Color color;
     String text;
 
     switch (status) {
-      case ReportStatus.draft:
+      case 'DRAFT':
         color = Colors.grey;
         text = '草稿';
         break;
-      case ReportStatus.pending:
+      case 'PENDING':
         color = Colors.orange;
         text = '待审批';
         break;
-      case ReportStatus.approved:
+      case 'APPROVED':
         color = Colors.green;
         text = '已通过';
         break;
-      case ReportStatus.rejected:
+      case 'REJECTED':
         color = Colors.red;
         text = '已驳回';
         break;
+      default:
+        color = Colors.grey;
+        text = status;
     }
 
     return Container(
@@ -316,26 +321,41 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
     );
   }
 
-  /// 格式化时间
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
+  /// 格式化日期
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('MM-dd').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}分钟前';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}小时前';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
-    } else {
-      return DateFormat('yyyy-MM-dd').format(time);
+  /// 格式化时间
+  String _formatTime(String dateTimeStr) {
+    try {
+      final time = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final difference = now.difference(time);
+
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}分钟前';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}小时前';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays}天前';
+      } else {
+        return DateFormat('yyyy-MM-dd').format(time);
+      }
+    } catch (e) {
+      return dateTimeStr;
     }
   }
 }
 
 /// 月报编辑页面
 class MonthlyReportEditPage extends StatefulWidget {
-  final MonthlyReport? report;
+  final MonthlyReportModel? report;
 
   const MonthlyReportEditPage({super.key, this.report});
 
@@ -344,11 +364,10 @@ class MonthlyReportEditPage extends StatefulWidget {
 }
 
 class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
+  final ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _summaryController = TextEditingController();
-  final _achievementsController = TextEditingController();
-  final _dataController = TextEditingController();
+  final _thisMonthController = TextEditingController();
   final _nextMonthController = TextEditingController();
   final _issuesController = TextEditingController();
 
@@ -364,7 +383,11 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
       _titleController.text = widget.report!.title;
       _selectedYear = widget.report!.year;
       _selectedMonth = widget.report!.month;
-      // TODO: 加载月报详细内容
+      _thisMonthController.text = widget.report!.thisMonthContent;
+      _nextMonthController.text = widget.report!.nextMonthPlan;
+      if (widget.report!.remark != null) {
+        _issuesController.text = widget.report!.remark!;
+      }
     } else {
       // 新建月报，自动设置为上个月
       _autoSetLastMonth();
@@ -374,9 +397,7 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
   @override
   void dispose() {
     _titleController.dispose();
-    _summaryController.dispose();
-    _achievementsController.dispose();
-    _dataController.dispose();
+    _thisMonthController.dispose();
     _nextMonthController.dispose();
     _issuesController.dispose();
     super.dispose();
@@ -411,85 +432,92 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('选择年月'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 年份选择
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          setState(() {
-                            tempYear--;
-                          });
-                        },
-                      ),
-                      SizedBox(
-                        width: 80,
-                        child: Text(
-                          '$tempYear年',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 年份选择
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          onPressed: () {
+                            setState(() {
+                              tempYear--;
+                            });
+                          },
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          setState(() {
-                            tempYear++;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // 月份选择
-                  GridView.builder(
-                    shrinkWrap: true,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: 1.5,
-                    ),
-                    itemCount: 12,
-                    itemBuilder: (context, index) {
-                      final month = index + 1;
-                      final isSelected = month == tempMonth;
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            tempMonth = month;
-                          });
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Theme.of(context).primaryColor
-                                : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${month}月',
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black87,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            '$tempYear年',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: () {
+                            setState(() {
+                              tempYear++;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // 月份选择
+                    SizedBox(
+                      height: 200,
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 1.5,
+                        ),
+                        itemCount: 12,
+                        itemBuilder: (context, index) {
+                          final month = index + 1;
+                          final isSelected = month == tempMonth;
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                tempMonth = month;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${month}月',
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : Colors.black87,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -545,26 +573,42 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
       return;
     }
 
-    if (_summaryController.text.trim().isEmpty) {
-      EasyLoading.showError('请填写工作概述');
+    if (_thisMonthController.text.trim().isEmpty) {
+      EasyLoading.showError('请填写本月工作内容');
       return;
     }
 
-    if (_achievementsController.text.trim().isEmpty) {
-      EasyLoading.showError('请填写主要成果');
+    if (_nextMonthController.text.trim().isEmpty) {
+      EasyLoading.showError('请填写下月计划');
       return;
     }
 
     try {
-      EasyLoading.show(status: '提交中...');
+      // 计算月份的起止日期
+      final startTime = DateTime(_selectedYear, _selectedMonth, 1);
+      final endTime = DateTime(_selectedYear, _selectedMonth + 1, 0);
+      
+      final response = await _apiService.createMonthlyReport(
+        title: _titleController.text.trim(),
+        startTime: DateFormat('yyyy-MM-dd').format(startTime),
+        endTime: DateFormat('yyyy-MM-dd').format(endTime),
+        thisMonthContent: _thisMonthController.text.trim(),
+        nextMonthPlan: _nextMonthController.text.trim(),
+        remark: _issuesController.text.trim().isNotEmpty 
+            ? _issuesController.text.trim() 
+            : null,
+      );
 
-      // TODO: 调用API提交月报
-      await Future.delayed(const Duration(seconds: 1));
-
-      EasyLoading.showSuccess('月报已提交');
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        Navigator.pop(context, true);
+      if (response.success) {
+        EasyLoading.showSuccess('月报已提交');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else {
+        EasyLoading.showError(response.message.isNotEmpty
+            ? response.message
+            : '提交失败，请重试');
       }
     } catch (e) {
       EasyLoading.showError('提交失败: $e');
@@ -630,38 +674,20 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
               _buildYearMonthSelector(),
               const SizedBox(height: 24),
 
-              // 工作概述
-              _buildSectionTitle('工作概述'),
+              // 本月工作内容
+              _buildSectionTitle('本月工作内容'),
               _buildTextArea(
-                controller: _summaryController,
-                hintText: '请概述本月整体工作情况...\n例如：\n本月主要完成了XXX项目的开发工作，参与了XXX会议，协助处理了XXX问题...',
-                maxLines: 6,
-              ),
-              const SizedBox(height: 24),
-
-              // 主要成果
-              _buildSectionTitle('主要成果'),
-              _buildTextArea(
-                controller: _achievementsController,
-                hintText: '请列举本月的主要工作成果...\n例如：\n1. 完成XXX功能模块开发\n2. 优化XXX性能提升X%\n3. 解决XXX关键问题',
+                controller: _thisMonthController,
+                hintText: '请详细描述本月完成的工作内容...\n例如：\n1. 完成组织架构管理模块\n2. 完成工作流任务管理模块\n3. 优化系统性能',
                 maxLines: 8,
               ),
               const SizedBox(height: 24),
 
-              // 数据统计
-              _buildSectionTitle('数据统计（选填）'),
-              _buildTextArea(
-                controller: _dataController,
-                hintText: '请填写相关数据指标...\n例如：\n- 完成需求：X个\n- 修复Bug：X个\n- 代码提交：X次\n- 工作时长：X小时',
-                maxLines: 6,
-              ),
-              const SizedBox(height: 24),
-
               // 下月计划
-              _buildSectionTitle('下月计划'),
+              _buildSectionTitle('下月工作计划'),
               _buildTextArea(
                 controller: _nextMonthController,
-                hintText: '请描述下月的工作计划...\n例如：\n1. 启动XXX新项目\n2. 完成XXX功能优化\n3. 学习XXX新技术',
+                hintText: '请描述下月的工作计划...\n例如：\n1. 开始权限管理模块\n2. 系统测试和优化\n3. 文档编写',
                 maxLines: 8,
               ),
               const SizedBox(height: 24),
@@ -793,29 +819,3 @@ class _MonthlyReportEditPageState extends State<MonthlyReportEditPage> {
   }
 }
 
-/// 月报状态
-enum ReportStatus {
-  draft,    // 草稿
-  pending,  // 待审批
-  approved, // 已通过
-  rejected, // 已驳回
-}
-
-/// 月报模型
-class MonthlyReport {
-  final int id;
-  final int month;
-  final int year;
-  final String title;
-  final ReportStatus status;
-  final DateTime? submitTime;
-
-  MonthlyReport({
-    required this.id,
-    required this.month,
-    required this.year,
-    required this.title,
-    required this.status,
-    this.submitTime,
-  });
-}
