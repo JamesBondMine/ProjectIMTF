@@ -3,8 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:package_im/services/api_service.dart';
 import 'package:package_im/pages/home_page.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'dart:io' show Platform;
 import 'agreement_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
@@ -22,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _apiService = ApiService();
   bool _isPasswordVisible = false;
-  bool _isAgreed = false;
+  bool _isAgreed = true;  // 默认勾选协议
   bool _isLoading = false;
 
   @override
@@ -114,168 +112,71 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// Apple 登录
-  Future<void> _handleAppleSignIn() async {
-    // 先检查是否勾选协议
-    if (!_isAgreed) {
-      EasyLoading.showError('请先阅读并同意隐私协议和用户协议');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // 检查是否支持 Apple 登录
-      final isAvailable = await SignInWithApple.isAvailable();
-      if (!isAvailable) {
-        if (mounted) {
-          EasyLoading.showError('当前设备不支持 Apple 登录');
-          setState(() {
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      // 发起 Apple 登录请求
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-
-      if (mounted) {
-        // 获取到 Apple 返回的凭证
-        final identityToken = credential.identityToken;
-        final appleUserId = credential.userIdentifier;
-        
-        // 获取用户信息（如果有的话）
-        final fullName = credential.givenName != null && credential.familyName != null
-            ? '${credential.familyName}${credential.givenName}'
-            : null;
-        final email = credential.email;
-
-        if (identityToken != null && appleUserId != null) {
-          // 调用后端 API 进行 Apple 登录验证
-          final response = await _apiService.appleLogin(
-            identityToken: identityToken,
-            appleUserId: appleUserId,
-            email: email,
-            nickname: fullName,
-          );
-
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-
-            if (response.success && response.data != null) {
-              // Apple 登录成功
-              EasyLoading.showSuccess('Apple 登录成功！');
-              await Future.delayed(const Duration(milliseconds: 500));
-
-              if (mounted) {
-                // 跳转到主页
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(
-                      username: response.data?.user.nickname ?? 
-                               fullName ?? 
-                               'Apple用户',
-                    ),
-                  ),
-                );
-              }
-            } else {
-              // 登录失败
-              EasyLoading.showError(response.message.isNotEmpty 
-                  ? response.message 
-                  : 'Apple 登录失败');
-            }
-          }
-        } else {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            EasyLoading.showError('Apple 登录失败，未获取到有效凭证');
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        
-        if (e is SignInWithAppleAuthorizationException) {
-          // 用户取消登录
-          if (e.code == AuthorizationErrorCode.canceled) {
-            EasyLoading.showInfo('已取消 Apple 登录');
-          } else {
-            EasyLoading.showError('Apple 登录失败: ${e.message}');
-          }
-        } else {
-          EasyLoading.showError('Apple 登录失败，请重试');
-        }
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: GestureDetector(
-        onTap: () {
-          // 点击空白处隐藏键盘
-          FocusScope.of(context).unfocus();
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                const SizedBox(height: 40),
-                const Text(
-                  '欢迎登录',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).primaryColor.withOpacity(0.1),
+              Theme.of(context).primaryColor.withOpacity(0.05),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: GestureDetector(
+          onTap: () {
+            // 点击空白处隐藏键盘
+            FocusScope.of(context).unfocus();
+          },
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                  const SizedBox(height: 80),
+                  const Text(
+                    '欢迎回来',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '请输入您的账号和密码',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                  const SizedBox(height: 8),
+                  Text(
+                    '登录以继续使用',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 40),
+                  const SizedBox(height: 48),
                 // 登录卡片
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                        spreadRadius: 0,
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -367,193 +268,203 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
                       // 登录按钮
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).primaryColor,
+                              Theme.of(context).primaryColor.withOpacity(0.8),
+                            ],
                           ),
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text(
-                                '登录',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 分隔线
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[300],
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              '或',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[300],
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Apple 登录按钮（仅在 iOS 平台显示）
-                      if (Platform.isIOS)
-                        SignInWithAppleButton(
-                          onPressed: _isLoading ? () {} : _handleAppleSignIn,
-                          text: 'Sign in with Apple',
-                          height: 50,
-                          style: SignInWithAppleButtonStyle.black,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // 协议勾选
-                Row(
-                  children: [
-                    Transform.scale(
-                      scale: 1.1,
-                      child: Checkbox(
-                        value: _isAgreed,
-                        activeColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _isAgreed = value ?? false;
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                          ),
-                          children: [
-                            const TextSpan(text: '我已阅读并同意'),
-                            TextSpan(
-                              text: '《隐私协议》',
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  _navigateToAgreement(
-                                    '隐私协议',
-                                    AgreementPage.privacyContent,
-                                  );
-                                },
-                            ),
-                            const TextSpan(text: '和'),
-                            TextSpan(
-                              text: '《用户协议》',
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  _navigateToAgreement(
-                                    '用户协议',
-                                    AgreementPage.userContent,
-                                  );
-                                },
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).primaryColor.withOpacity(0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  '登录',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                // 协议勾选
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      Transform.scale(
+                        scale: 1.15,
+                        child: Checkbox(
+                          value: _isAgreed,
+                          activeColor: Theme.of(context).primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _isAgreed = value ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              height: 1.4,
+                            ),
+                            children: [
+                              const TextSpan(text: '我已阅读并同意'),
+                              TextSpan(
+                                text: '《隐私协议》',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    _navigateToAgreement(
+                                      '隐私协议',
+                                      AgreementPage.privacyContent,
+                                    );
+                                  },
+                              ),
+                              const TextSpan(text: '和'),
+                              TextSpan(
+                                text: '《用户协议》',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    _navigateToAgreement(
+                                      '用户协议',
+                                      AgreementPage.userContent,
+                                    );
+                                  },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 32),
                 // 底部链接
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordPage(),
-                          ),
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey[700],
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                      child: const Text(
-                        '忘记密码？',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ),
-                    Container(
-                      height: 14,
-                      width: 1,
-                      color: Colors.grey[300],
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // 跳转到注册页面
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
-                          ),
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).primaryColor,
-                      ),
-                      child: const Text(
-                        '立即注册',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordPage(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                        ),
+                        icon: Icon(Icons.help_outline, size: 18, color: Colors.grey[600]),
+                        label: const Text(
+                          '忘记密码',
+                          style: TextStyle(fontSize: 14),
                         ),
                       ),
-                    ),
+                      Container(
+                        height: 18,
+                        width: 1.5,
+                        color: Colors.grey[300],
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          // 跳转到注册页面
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).primaryColor,
+                        ),
+                        icon: Icon(Icons.person_add_outlined, size: 18),
+                        label: const Text(
+                          '立即注册',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
                   ],
                 ),
-                const SizedBox(height: 20),
-                ],
               ),
             ),
           ),
