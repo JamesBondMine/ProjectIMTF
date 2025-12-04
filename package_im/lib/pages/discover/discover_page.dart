@@ -36,7 +36,7 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
@@ -45,24 +45,53 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               elevation: 0,
-              toolbarHeight: 48,
-              flexibleSpace: SafeArea(
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: Colors.white,
-                  indicatorWeight: 3,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  labelStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+              toolbarHeight: 68,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.85),
+                      Theme.of(context).primaryColor.withOpacity(0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 16,
-                  ),
-                  tabs: const [
-                    Tab(text: '推荐'),
-                    Tab(text: '关注'),
+                ),
+                child: Stack(
+                  children: [
+                    // 装饰性圆圈
+                    Positioned(
+                      top: -20,
+                      right: 40,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -30,
+                      left: -20,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ),
+                    // 主要内容
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                        child: _buildCustomTabBar(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -83,6 +112,70 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
         },
         backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.add, size: 32),
+      ),
+    );
+  }
+
+  /// 构建自定义胶囊式 TabBar
+  Widget _buildCustomTabBar(BuildContext context) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: Theme.of(context).primaryColor,
+        unselectedLabelColor: Colors.white,
+        labelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+        dividerColor: Colors.transparent,
+        tabs: const [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.star_rounded, size: 18),
+                SizedBox(width: 6),
+                Text('推荐'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.favorite_rounded, size: 18),
+                SizedBox(width: 6),
+                Text('关注'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -131,24 +224,24 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
                     }
                   },
                 ),
-                _buildPublishOption(
-                  icon: Icons.videocam_outlined,
-                  title: '发布视频',
-                  color: Colors.red,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: 跳转到发布视频页面
-                  },
-                ),
-                _buildPublishOption(
-                  icon: Icons.article_outlined,
-                  title: '发布文章',
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: 跳转到发布文章页面
-                  },
-                ),
+                // _buildPublishOption(
+                //   icon: Icons.videocam_outlined,
+                //   title: '发布视频',
+                //   color: Colors.red,
+                //   onTap: () {
+                //     Navigator.pop(context);
+                //     // TODO: 跳转到发布视频页面
+                //   },
+                // ),
+                // _buildPublishOption(
+                //   icon: Icons.article_outlined,
+                //   title: '发布文字',
+                //   color: Colors.orange,
+                //   onTap: () {
+                //     Navigator.pop(context);
+                //     // TODO: 跳转到发布文章页面
+                //   },
+                // ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),

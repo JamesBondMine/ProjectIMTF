@@ -290,7 +290,7 @@ class AgreementPage extends StatelessWidget {
 • 第三方SDK不会在后台自动收集或上传您的个人信息
 • 图片和视频仅在用户主动上传时才会传输到服务器
 
-如有任何疑问，请通过邮箱 qikuazc@163.com 联系我们了解更多信息。
+如有任何疑问，请通过邮箱 cpnow789456@outlook.com 联系我们了解更多信息。
 
 7. 发现功能隐私说明
 
@@ -337,7 +337,7 @@ class AgreementPage extends StatelessWidget {
 10. 联系我们
 
 如果您对本隐私协议有任何疑问，或需要行使您的权利，请通过以下方式联系我们：
-• 邮箱：qikuazc@163.com
+• 邮箱：cpnow789456@outlook.com
 • 应用内：设置 - 投诉建议
 
 11. 协议更新
@@ -551,7 +551,7 @@ class AgreementPage extends StatelessWidget {
 12. 联系方式
 
 如有任何疑问，请联系我们：
-• 邮箱：qikuazc@163.com
+• 邮箱：cpnow789456@outlook.com
 • 应用内：设置 - 投诉建议
 
 13. 特别提示

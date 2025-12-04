@@ -470,6 +470,7 @@ class ApiService {
         data: {
           'content': content,
           'mediaType': mediaType,
+          "category": "IMAGE_TEXT",
           'mediaUrls': mediaUrls ?? [],
         },
         showLoading: true,
