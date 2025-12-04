@@ -464,7 +464,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text('版本: 1.0.0'),
             SizedBox(height: 8),
-            Text('开发者: Flutter Team'),
+            Text('开发者: discover team'),
             SizedBox(height: 8),
             Text('Copyright © 2024'),
           ],
