@@ -28,10 +28,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>趣聊</string>
+			<string>chatqu</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>趣聊</string>
+				<string>quchat</string>
 			</array>
 		</dict>
 	</array>
