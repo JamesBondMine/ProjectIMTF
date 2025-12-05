@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>趣聊</string>
+	<string>橙色</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>趣聊</string>
+	<string>橙色</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -75,6 +75,6 @@
 	<key>UIRequiresFullScreen</key>
 	<false/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2025 趣聊开发团队. All rights reserved.</string>
+	<string>© 2025 橙色开发团队. All rights reserved.</string>
 </dict>
 </plist>
