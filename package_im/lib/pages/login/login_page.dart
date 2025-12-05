@@ -117,256 +117,219 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).primaryColor.withOpacity(0.1),
-              Theme.of(context).primaryColor.withOpacity(0.05),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: GestureDetector(
-          onTap: () {
-            // 点击空白处隐藏键盘
-            FocusScope.of(context).unfocus();
-          },
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: Colors.white,
+      body: GestureDetector(
+        onTap: () {
+          // 点击空白处隐藏键盘
+          FocusScope.of(context).unfocus();
+        },
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                const SizedBox(height: 100),
+                // 简约标题 - 使用主题色点缀
+                Row(
                   children: [
-                  const SizedBox(height: 80),
-                  const Text(
-                    '欢迎回来',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
+                    Text(
+                      '登录',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: -1,
+                        color: Theme.of(context).primaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '登录以继续使用',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w400,
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 48),
-                // 登录卡片
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 账号输入框
-                      TextFormField(
-                        controller: _accountController,
-                        decoration: InputDecoration(
-                          labelText: '账号/邮箱',
-                          hintText: '请输入账号或邮箱',
-                          prefixIcon: Icon(
-                            Icons.person_outline,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return '请输入账号或邮箱';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // 密码输入框
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        decoration: InputDecoration(
-                          labelText: '密码',
-                          hintText: '请输入密码',
-                          prefixIcon: Icon(
-                            Icons.lock_outline,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return '请输入密码';
-                          }
-                          if (value.length < 6) {
-                            return '密码长度至少6个字符';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 28),
-                      // 登录按钮
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Theme.of(context).primaryColor,
-                              Theme.of(context).primaryColor.withOpacity(0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).primaryColor.withOpacity(0.4),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : const Text(
-                                  '登录',
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '欢迎回来',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w300,
                   ),
                 ),
-                const SizedBox(height: 28),
-                // 协议勾选
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Transform.scale(
-                        scale: 1.15,
-                        child: Checkbox(
-                          value: _isAgreed,
-                          activeColor: Theme.of(context).primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
+                const SizedBox(height: 60),
+                // 简约输入区
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 账号输入框 - 简约风格
+                    TextFormField(
+                      controller: _accountController,
+                      decoration: InputDecoration(
+                        labelText: '账号',
+                        labelStyle: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w300,
+                        ),
+                        hintText: '邮箱或用户名',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).primaryColor, // 主题色
+                            width: 1.5,
                           ),
-                          onChanged: (value) {
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      style: const TextStyle(fontSize: 16),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入账号或邮箱';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    // 密码输入框 - 简约风格
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: InputDecoration(
+                        labelText: '密码',
+                        labelStyle: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w300,
+                        ),
+                        hintText: '至少6个字符',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                          onPressed: () {
                             setState(() {
-                              _isAgreed = value ?? false;
+                              _isPasswordVisible = !_isPasswordVisible;
                             });
                           },
                         ),
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).primaryColor, // 主题色
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      Expanded(
+                      style: const TextStyle(fontSize: 16),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入密码';
+                        }
+                        if (value.length < 6) {
+                          return '密码长度至少6个字符';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                    // 简约登录按钮 - 使用主题色
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          disabledBackgroundColor: Colors.grey[300],
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                '登录',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                // 简约协议勾选 - 使用主题色
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Transform.scale(
+                      scale: 0.9,
+                      child: Checkbox(
+                        value: _isAgreed,
+                        activeColor: Theme.of(context).primaryColor,
+                        side: BorderSide(color: Colors.grey[400]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isAgreed = value ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 12),
                         child: RichText(
                           text: TextSpan(
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey[700],
-                              height: 1.4,
+                              color: Colors.grey[600],
+                              height: 1.5,
+                              fontWeight: FontWeight.w300,
                             ),
                             children: [
-                              const TextSpan(text: '我已阅读并同意'),
+                              const TextSpan(text: '我已阅读并同意 '),
                               TextSpan(
-                                text: '《隐私协议》',
+                                text: '隐私协议',
                                 style: TextStyle(
                                   color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
@@ -376,12 +339,12 @@ class _LoginPageState extends State<LoginPage> {
                                     );
                                   },
                               ),
-                              const TextSpan(text: '和'),
+                              const TextSpan(text: ' 和 '),
                               TextSpan(
-                                text: '《用户协议》',
+                                text: '用户协议',
                                 style: TextStyle(
                                   color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
@@ -395,77 +358,66 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // 底部链接
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const ForgotPasswordPage(),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey[700],
-                        ),
-                        icon: Icon(Icons.help_outline, size: 18, color: Colors.grey[600]),
-                        label: const Text(
-                          '忘记密码',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      Container(
-                        height: 18,
-                        width: 1.5,
-                        color: Colors.grey[300],
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          // 跳转到注册页面
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Theme.of(context).primaryColor,
-                        ),
-                        icon: Icon(Icons.person_add_outlined, size: 18),
-                        label: const Text(
-                          '立即注册',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
+                    ),
                   ],
                 ),
+                const SizedBox(height: 48),
+                // 简约底部链接 - 注册使用主题色
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordPage(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: Text(
+                        '忘记密码',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '·',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterPage(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: const Text(
+                        '注册账号',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 60),
+                ],
               ),
             ),
           ),

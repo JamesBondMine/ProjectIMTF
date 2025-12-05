@@ -102,13 +102,13 @@ class _DiscoverPageState extends State<DiscoverPage> with SingleTickerProviderSt
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showPublishOptions(context);
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, size: 32),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     _showPublishOptions(context);
+      //   },
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   child: const Icon(Icons.add, size: 32),
+      // ),
     );
   }
 
