@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -6,6 +7,8 @@ import 'dart:io';
 import '../../services/api_service.dart';
 import '../login/login_page.dart';
 import '../login/agreement_page.dart';
+import '../chat/chat_list_page.dart';
+import '../friend/friend_list_page.dart';
 import 'feedback_page.dart';
 import 'my_following_page.dart';
 import 'my_followers_page.dart';
@@ -52,20 +55,35 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = _apiService.currentUser;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
+    // 设置状态栏为透明，图标为深色
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('个人信息'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      // appBar: AppBar(
+      //   title: const Text('个人信息'),
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   foregroundColor: Colors.white,
+      // ),
       body: SingleChildScrollView(
         child: Column(
           children: [
             // 顶部用户信息卡片
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.only(
+                top: statusBarHeight + 24,
+                left: 24,
+                right: 24,
+                bottom: 24,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor.withOpacity(0.1),
               ),
@@ -146,6 +164,9 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 16),
             // 信息列表
             _buildInfoSection(),
+            const SizedBox(height: 16),
+            // 快捷入口（好友和聊天）
+            _buildQuickAccessSection(),
             const SizedBox(height: 16),
             // 设置列表
             _buildSettingSection(),
@@ -309,6 +330,51 @@ class _ProfilePageState extends State<ProfilePage> {
             imagePath: 'assets/images/youxiang.png',
             title: '邮箱',
             value: user?.email ?? '未设置',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 快捷入口区域（好友和聊天）
+  Widget _buildQuickAccessSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildSettingItem(
+            icon: Icons.people_outline,
+            title: '好友',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const FriendListPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            icon: Icons.chat_bubble_outline,
+            title: '聊天',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ChatListPage(),
+                ),
+              );
+            },
           ),
         ],
       ),

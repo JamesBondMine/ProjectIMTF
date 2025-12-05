@@ -243,7 +243,6 @@ class _ChatListPageState extends State<ChatListPage> {
 
   /// 顶部头像区域（包含状态栏）
   Widget _buildHeader(BuildContext context) {
-    final user = _apiService.currentUser;
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
@@ -265,77 +264,30 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       child: Row(
         children: [
-          // 用户头像
-          user?.avatarUrl != null
-              ? CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.white,
-                  child: ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: user!.avatarUrl!,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.white,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.white,
-                        child: Center(
-                          child: Text(
-                            user.nickname.isNotEmpty
-                                ? user.nickname[0].toUpperCase()
-                                : user.username[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              : CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.white,
-                  child: Text(
-                    user?.nickname.isNotEmpty == true
-                        ? user!.nickname[0].toUpperCase()
-                        : user?.username[0].toUpperCase() ?? '?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+          // 返回按钮
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white,
+              size: 22,
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
           const SizedBox(width: 12),
-          // 用户信息
+          // 聊天标题
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '聊天',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+            child: Text(
+              '聊天',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],

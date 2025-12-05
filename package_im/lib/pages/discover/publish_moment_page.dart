@@ -29,20 +29,39 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('发布动态'),
+        elevation: 0,
+        title: const Text(
+          '发布动态',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          TextButton(
-            onPressed: _isPublishing ? null : _handlePublish,
-            child: Text(
-              '发布',
-              style: TextStyle(
-                color: _isPublishing ? Colors.white54 : Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+          Container(
+            margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+            child: ElevatedButton(
+              onPressed: _isPublishing ? null : _handlePublish,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Theme.of(context).primaryColor,
+                disabledBackgroundColor: Colors.white54,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: const Text(
+                '发布',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -52,108 +71,252 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 16),
             // 输入内容区域
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _contentController,
-                maxLines: 8,
-                maxLength: 500,
-                decoration: const InputDecoration(
-                  hintText: '分享你的生活...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            // 图片选择区域
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '添加图片（最多9张）',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: TextField(
+                      controller: _contentController,
+                      maxLines: 8,
+                      maxLength: 500,
+                      decoration: InputDecoration(
+                        hintText: '分享新鲜事...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[400],
+                          fontWeight: FontWeight.w400,
+                        ),
+                        counterStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        height: 1.6,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildImageGrid(),
+                  // 快捷标签
+                  Container(
+                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildQuickTag('☀️ 日常', () => _insertText('#☀️日常 ')),
+                        _buildQuickTag('🍜 美食', () => _insertText('#🍜美食 ')),
+                        _buildQuickTag('✈️ 旅行', () => _insertText('#✈️旅行 ')),
+                        _buildQuickTag('📷 摄影', () => _insertText('#📷摄影 ')),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            // 图片选择区域
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.photo_library_outlined,
+                            size: 20,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          '添加图片',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_selectedImages.length}/9',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildImageGrid(),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // 提示信息
-            Padding(
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor.withOpacity(0.05),
+                    Theme.of(context).primaryColor.withOpacity(0.02),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: Colors.grey[600],
+                        Icons.lightbulb_outline,
+                        size: 18,
+                        color: Theme.of(context).primaryColor,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
-                        '发布须知',
+                        '发布提示',
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildTipItem('请遵守社区规范，发布健康积极的内容'),
-                  _buildTipItem('不得发布违法违规、低俗色情等不良信息'),
-                  _buildTipItem('尊重他人隐私，未经同意请勿发布他人照片'),
+                  const SizedBox(height: 12),
+                  _buildTipItem('分享美好瞬间，传递正能量'),
+                  _buildTipItem('尊重他人隐私，文明发言'),
+                  _buildTipItem('内容需符合社区规范'),
                 ],
               ),
             ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
 
+  /// 快捷标签
+  Widget _buildQuickTag(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).primaryColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).primaryColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 插入文本到光标位置
+  void _insertText(String text) {
+    final currentText = _contentController.text;
+    final selection = _contentController.selection;
+    final newText = currentText.replaceRange(
+      selection.start,
+      selection.end,
+      text,
+    );
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: selection.start + text.length,
+      ),
+    );
+  }
+
   Widget _buildTipItem(String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 22, top: 4),
+      padding: const EdgeInsets.only(left: 26, top: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 8),
-            width: 4,
-            height: 4,
+            margin: const EdgeInsets.only(top: 6),
+            width: 5,
+            height: 5,
             decoration: BoxDecoration(
-              color: Colors.grey[600],
+              color: Theme.of(context).primaryColor.withOpacity(0.6),
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey[600],
+                color: Colors.grey[700],
                 height: 1.5,
               ),
             ),
@@ -169,8 +332,8 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
         childAspectRatio: 1,
       ),
       itemCount: _selectedImages.length < 9 
@@ -188,76 +351,141 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
   }
 
   Widget _buildAddImageButton() {
-    return InkWell(
-      onTap: _pickImages,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _pickImages,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).primaryColor.withOpacity(0.05),
+                Theme.of(context).primaryColor.withOpacity(0.08),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withOpacity(0.2),
+              width: 1.5,
+              style: BorderStyle.solid,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_photo_alternate_outlined,
-              size: 40,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '添加图片',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 28,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                '添加',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildImageItem(XFile image, int index) {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.file(
-            File(image.path),
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedImages.removeAt(index);
-              });
-            },
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: Colors.white,
+        ],
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              File(image.path),
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          // 删除按钮
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedImages.removeAt(index);
+                });
+              },
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.6),
+                      Colors.black.withOpacity(0.4),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+          // 图片序号
+          Positioned(
+            bottom: 6,
+            left: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${index + 1}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
