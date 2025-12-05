@@ -8,6 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		2A0BE5BE2EE277D0001FF039 /* 聊天.PNG in Resources */ = {isa = PBXBuildFile; fileRef = 2A0BE5BA2EE277D0001FF039 /* 聊天.PNG */; };
+		2A0BE5BF2EE277D0001FF039 /* 评论列表.PNG in Resources */ = {isa = PBXBuildFile; fileRef = 2A0BE5BB2EE277D0001FF039 /* 评论列表.PNG */; };
+		2A0BE5C02EE277D0001FF039 /* 我的个人信息.PNG in Resources */ = {isa = PBXBuildFile; fileRef = 2A0BE5BC2EE277D0001FF039 /* 我的个人信息.PNG */; };
+		2A0BE5C12EE277D0001FF039 /* 好友信息.PNG in Resources */ = {isa = PBXBuildFile; fileRef = 2A0BE5B92EE277D0001FF039 /* 好友信息.PNG */; };
+		2A0BE5C22EE277D0001FF039 /* 动态.PNG in Resources */ = {isa = PBXBuildFile; fileRef = 2A0BE5B82EE277D0001FF039 /* 动态.PNG */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
@@ -47,6 +52,11 @@
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		2522A4B37F952DFEFECBDF81 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		2A0BE5B82EE277D0001FF039 /* 动态.PNG */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "动态.PNG"; sourceTree = "<group>"; };
+		2A0BE5B92EE277D0001FF039 /* 好友信息.PNG */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "好友信息.PNG"; sourceTree = "<group>"; };
+		2A0BE5BA2EE277D0001FF039 /* 聊天.PNG */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "聊天.PNG"; sourceTree = "<group>"; };
+		2A0BE5BB2EE277D0001FF039 /* 评论列表.PNG */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "评论列表.PNG"; sourceTree = "<group>"; };
+		2A0BE5BC2EE277D0001FF039 /* 我的个人信息.PNG */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "我的个人信息.PNG"; sourceTree = "<group>"; };
 		2A95BDC22ECC70B500ADF3EA /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,6 +98,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2A0BE5BD2EE277D0001FF039 /* img */ = {
+			isa = PBXGroup;
+			children = (
+				2A0BE5B82EE277D0001FF039 /* 动态.PNG */,
+				2A0BE5B92EE277D0001FF039 /* 好友信息.PNG */,
+				2A0BE5BA2EE277D0001FF039 /* 聊天.PNG */,
+				2A0BE5BB2EE277D0001FF039 /* 评论列表.PNG */,
+				2A0BE5BC2EE277D0001FF039 /* 我的个人信息.PNG */,
+			);
+			path = img;
+			sourceTree = "<group>";
+		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -131,6 +153,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				2A0BE5BD2EE277D0001FF039 /* img */,
 				2A95BDC22ECC70B500ADF3EA /* Runner.entitlements */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
@@ -262,6 +285,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2A0BE5BE2EE277D0001FF039 /* 聊天.PNG in Resources */,
+				2A0BE5BF2EE277D0001FF039 /* 评论列表.PNG in Resources */,
+				2A0BE5C02EE277D0001FF039 /* 我的个人信息.PNG in Resources */,
+				2A0BE5C12EE277D0001FF039 /* 好友信息.PNG in Resources */,
+				2A0BE5C22EE277D0001FF039 /* 动态.PNG in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
@@ -491,7 +519,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1204;
 				DEVELOPMENT_TEAM = "";
@@ -508,7 +536,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.codeappyang.idnumberft;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft_hoc_1027;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft1026dev;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -688,7 +716,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1204;
 				DEVELOPMENT_TEAM = "";
@@ -705,7 +733,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.codeappyang.idnumberft;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft_hoc_1027;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft1026dev;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -725,7 +753,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1204;
 				DEVELOPMENT_TEAM = "";
@@ -742,7 +770,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.codeappyang.idnumberft;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft_hoc_1027;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = ft1026dev;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
