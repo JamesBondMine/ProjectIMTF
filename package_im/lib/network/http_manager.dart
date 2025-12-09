@@ -220,6 +220,10 @@ class HttpManager {
       if (showLoading) {
         EasyLoading.dismiss();
       }
+      if (path.contains('login')) {
+        Map<String, dynamic> errorData = {"code": -1, "message": "登录失败", "success": false};
+        return ApiResponse.fromJson(errorData, fromJson);
+      }
       rethrow;
     }
   }

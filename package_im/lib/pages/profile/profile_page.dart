@@ -381,6 +381,15 @@ class _ProfilePageState extends State<ProfilePage> {
               _showAboutDialog();
             },
           ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            imagePath: 'assets/images/icon_logout.png',
+            title: '删除账号',
+            titleColor: Colors.red,
+            onTap: () {
+              _showDeleteAccountDialog();
+            },
+          ),
         ],
       ),
     );
@@ -435,6 +444,7 @@ class _ProfilePageState extends State<ProfilePage> {
     IconData? icon,
     String? imagePath,
     required String title,
+    Color? titleColor,
     required VoidCallback onTap,
   }) {
     return ListTile(
@@ -443,10 +453,13 @@ class _ProfilePageState extends State<ProfilePage> {
               imagePath,
               width: 24,
               height: 24,
-              color: Colors.grey[600],
+              color: titleColor ?? Colors.grey[600],
             )
-          : Icon(icon, color: Colors.grey[600]),
-      title: Text(title),
+          : Icon(icon, color: titleColor ?? Colors.grey[600]),
+      title: Text(
+        title,
+        style: TextStyle(color: titleColor),
+      ),
       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       onTap: onTap,
     );
@@ -744,6 +757,185 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+  }
+
+  /// 显示删除账号对话框
+  /// 
+  /// 根据 Apple 审核指南 5.1.1(v)，应用必须提供账号删除功能
+  /// 需要明确告知用户删除账号的后果，并提供二次确认
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('删除账号'),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '删除账号后，以下数据将被永久删除且无法恢复：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text('• 个人信息（头像、昵称、邮箱等）'),
+              Text('• 所有发布的动态和评论'),
+              Text('• 聊天记录和会话'),
+              Text('• 好友关系'),
+              Text('• 关注和粉丝'),
+              SizedBox(height: 12),
+              Text(
+                '此操作不可逆，请谨慎操作！',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showDeleteAccountConfirmDialog();
+              },
+              child: const Text(
+                '继续删除',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 显示删除账号确认对话框（第二次确认）
+  /// 
+  /// 要求用户输入"删除"来确认操作，防止误操作
+  void _showDeleteAccountConfirmDialog() {
+    final TextEditingController confirmController = TextEditingController();
+    bool isButtonEnabled = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('确认删除'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '请在下方输入框中输入"删除"以确认删除账号：',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmController,
+                    decoration: InputDecoration(
+                      hintText: '请输入"删除"',
+                      border: const OutlineInputBorder(),
+                      errorText: isButtonEnabled ? null : '',
+                      errorStyle: const TextStyle(height: 0),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        isButtonEnabled = value.trim() == '删除';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '温馨提示：删除后无法恢复',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: isButtonEnabled
+                      ? () async {
+                          Navigator.of(dialogContext).pop();
+                          await _deleteAccount();
+                        }
+                      : null,
+                  child: Text(
+                    '确认删除',
+                    style: TextStyle(
+                      color: isButtonEnabled ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 执行删除账号操作
+  Future<void> _deleteAccount() async {
+    try {
+      // 显示加载
+      EasyLoading.show(status: '注销中...');
+
+      // 调用删除账号API
+      final response = await _apiService.deleteAccount();
+
+      EasyLoading.dismiss();
+
+      if (response.success) {
+        // 删除成功，显示服务器返回的消息
+        final successMessage = response.data ?? '账号已注销';
+        EasyLoading.showSuccess(successMessage);
+
+        // 延迟一下再跳转
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // 返回登录页面
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginPage(),
+            ),
+            (route) => false,
+          );
+        }
+      } else {
+        // 删除失败
+        EasyLoading.showError(
+          response.message.isNotEmpty ? response.message : '注销失败，请重试',
+        );
+      }
+    } catch (e) {
+      EasyLoading.dismiss();
+      EasyLoading.showError('删除失败: $e');
+    }
   }
 }
 

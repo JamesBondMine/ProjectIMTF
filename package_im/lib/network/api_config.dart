@@ -41,6 +41,9 @@ class ApiConfig {
   // 更新用户信息
   static const String updateUserInfoPath = '/api/auth/profile';
   
+  // 删除账号（注销账号）
+  static const String deleteAccountPath = '/api/auth/deactivate';
+  
   // 文件上传
   static const String uploadSingleFilePath = '/api/files/upload/single';
   

@@ -130,6 +130,18 @@ class ApiService {
         debugPrint('登录成功: ${_currentUser?.nickname}');
         debugPrint('Token: $_token');
         debugPrint('数据已保存到本地存储');
+      } else {
+        // 登录失败，显示错误信息
+        String errorMessage = response.message;
+        
+        // 特殊处理：账号被禁用的情况
+        if (errorMessage.contains('禁用') || errorMessage.contains('已被停用')) {
+          errorMessage = '该账号已被注销或禁用，无法登录';
+        } else if (errorMessage.isEmpty) {
+          errorMessage = '登录失败，请检查用户名和密码';
+        }
+        
+        debugPrint('登录失败: $errorMessage');
       }
 
       return response;
@@ -217,6 +229,46 @@ class ApiService {
       _currentUser = null;
       _httpManager.clearToken();
       await _storageManager.clearLoginData();
+    }
+  }
+
+  /// 删除账号（注销账号）
+  /// 
+  /// 根据 Apple 审核要求，应用必须提供账号删除功能
+  /// 此操作不可逆，会永久删除用户的所有数据
+  Future<ApiResponse<String>> deleteAccount() async {
+    try {
+      debugPrint('请求注销账号');
+
+      final response = await _httpManager.post<String>(
+        ApiConfig.deleteAccountPath,
+        data: {},
+        showLoading: true,
+        fromJson: (json) {
+          // 解析返回的 data 字段（"账号注销成功"）
+          if (json is String) {
+            return json;
+          }
+          return json.toString();
+        },
+      );
+
+      debugPrint('注销账号响应: ${response.message}');
+
+      if (response.success) {
+        // 删除成功后清除本地数据
+        _token = null;
+        _currentUser = null;
+        _httpManager.clearToken();
+        await _storageManager.clearLoginData();
+        
+        debugPrint('账号注销成功，已清除所有本地数据');
+      }
+
+      return response;
+    } catch (e) {
+      debugPrint('注销账号失败: $e');
+      rethrow;
     }
   }
 

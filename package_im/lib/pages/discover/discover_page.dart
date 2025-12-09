@@ -660,7 +660,7 @@ class _RecommendTabState extends State<_RecommendTab> {
             ),
           ),
           if (moment.mediaUrls.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            // const SizedBox(height: 12),
             // 图片
             _buildImageGrid(moment.mediaUrls),
           ],

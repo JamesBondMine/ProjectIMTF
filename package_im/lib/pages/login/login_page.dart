@@ -85,9 +85,16 @@ class _LoginPageState extends State<LoginPage> {
             }
           } else {
             // 登录失败，显示错误信息
-            EasyLoading.showError(response.message.isNotEmpty 
-                ? response.message 
-                : '登录失败，请重试');
+            String errorMessage = response.message;
+            
+            // 特殊处理：账号被禁用的情况
+            if (errorMessage.contains('禁用') || errorMessage.contains('已被停用')) {
+              errorMessage = '该账号已被注销，无法登录\n如需使用请重新注册';
+            } else if (errorMessage.isEmpty) {
+              errorMessage = '登录失败，请检查用户名和密码';
+            }
+            
+            EasyLoading.showError(errorMessage);
           }
         }
       } catch (e) {
