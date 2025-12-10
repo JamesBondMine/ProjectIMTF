@@ -4,6 +4,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../models/moment.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../utils/block_manager.dart';
 import 'publish_moment_page.dart';
 import 'moment_comments_page.dart';
 import '../friend/friend_detail_page.dart';
@@ -298,6 +299,7 @@ class _RecommendTab extends StatefulWidget {
 
 class _RecommendTabState extends State<_RecommendTab> {
   final ApiService _apiService = ApiService();
+  final BlockManager _blockManager = BlockManager();
   final ScrollController _scrollController = ScrollController();
   
   List<Moment> _moments = [];
@@ -410,6 +412,9 @@ class _RecommendTabState extends State<_RecommendTab> {
     });
 
     try {
+      // 初始化黑名单管理器
+      await _blockManager.init();
+      
       final response = await _apiService.getMoments(
         page: _currentPage,
         size: 10,
@@ -419,11 +424,16 @@ class _RecommendTabState extends State<_RecommendTab> {
         if (response.success && response.data != null) {
           final momentListResponse = MomentListResponse.fromJson(response.data);
           
+          // 过滤掉被拉黑用户的动态
+          final filteredMoments = momentListResponse.moments
+              .where((moment) => !_blockManager.isBlockedSync(moment.userId.toString()))
+              .toList();
+          
           setState(() {
             if (isRefresh) {
-              _moments = momentListResponse.moments;
+              _moments = filteredMoments;
             } else {
-              _moments.addAll(momentListResponse.moments);
+              _moments.addAll(filteredMoments);
             }
             _hasMore = momentListResponse.hasNext;
             _isLoading = false;
@@ -761,6 +771,33 @@ class _RecommendTabState extends State<_RecommendTab> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                // 拉黑用户（不是自己的动态才显示）
+                if (!moment.isMyMoment)
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.block_outlined, color: Colors.orange, size: 24),
+                    ),
+                    title: const Text(
+                      '拉黑该用户',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '拉黑后将无法查看对方内容',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _blockUserFromMoment(moment);
+                    },
+                  ),
+                if (!moment.isMyMoment)
+                  const SizedBox(height: 8),
                 ListTile(
                   leading: Container(
                     width: 40,
@@ -813,6 +850,54 @@ class _RecommendTabState extends State<_RecommendTab> {
         );
       },
     );
+  }
+
+  /// 从动态拉黑用户
+  Future<void> _blockUserFromMoment(Moment moment) async {
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('拉黑用户'),
+        content: Text(
+          '确定要拉黑"${moment.nickname}"吗？\n\n拉黑后：\n• 无法查看对方动态\n• 无法收到对方消息\n• 将从好友列表移除',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
+            child: const Text('拉黑'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    EasyLoading.show(status: '处理中...');
+
+    try {
+      // 调用 API 拉黑用户
+      await _apiService.blockUser(moment.userId.toString());
+      
+      // 更新本地黑名单
+      await _blockManager.blockUser(moment.userId.toString());
+
+      // 从列表移除该用户的所有动态
+      setState(() {
+        _moments.removeWhere((m) => m.userId == moment.userId);
+      });
+
+      EasyLoading.showSuccess('已拉黑');
+    } catch (e) {
+      EasyLoading.showError('操作失败: $e');
+    }
   }
 
   Widget _buildImageGrid(List<String> images) {
@@ -888,6 +973,7 @@ class _FollowTab extends StatefulWidget {
 
 class _FollowTabState extends State<_FollowTab> {
   final ApiService _apiService = ApiService();
+  final BlockManager _blockManager = BlockManager();
   final ScrollController _scrollController = ScrollController();
   
   List<Moment> _moments = [];
@@ -1000,6 +1086,9 @@ class _FollowTabState extends State<_FollowTab> {
     });
 
     try {
+      // 初始化黑名单管理器
+      await _blockManager.init();
+      
       final response = await _apiService.getFollowingMoments(
         page: _currentPage,
         size: 10,
@@ -1009,16 +1098,21 @@ class _FollowTabState extends State<_FollowTab> {
         if (response.success && response.data != null) {
           final momentListResponse = MomentListResponse.fromJson(response.data);
           
+          // 过滤掉被拉黑用户的动态
+          final filteredMoments = momentListResponse.moments
+              .where((moment) => !_blockManager.isBlockedSync(moment.userId.toString()))
+              .toList();
+          
           setState(() {
             if (isRefresh) {
-              _moments = momentListResponse.moments;
+              _moments = filteredMoments;
             } else {
-              _moments.addAll(momentListResponse.moments);
+              _moments.addAll(filteredMoments);
             }
             _hasMore = momentListResponse.hasNext;
             _isLoading = false;
           });
-        } else {
+        } else{
           setState(() {
             _isLoading = false;
           });
@@ -1156,6 +1250,33 @@ class _FollowTabState extends State<_FollowTab> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                // 拉黑用户（不是自己的动态才显示）
+                if (!moment.isMyMoment)
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.block_outlined, color: Colors.orange, size: 24),
+                    ),
+                    title: const Text(
+                      '拉黑该用户',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '拉黑后将无法查看对方内容',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _blockUserFromMoment(moment);
+                    },
+                  ),
+                if (!moment.isMyMoment)
+                  const SizedBox(height: 8),
                 ListTile(
                   leading: Container(
                     width: 40,
@@ -1208,6 +1329,54 @@ class _FollowTabState extends State<_FollowTab> {
         );
       },
     );
+  }
+
+  /// 从动态拉黑用户
+  Future<void> _blockUserFromMoment(Moment moment) async {
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('拉黑用户'),
+        content: Text(
+          '确定要拉黑"${moment.nickname}"吗？\n\n拉黑后：\n• 无法查看对方动态\n• 无法收到对方消息\n• 将从好友列表移除',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
+            child: const Text('拉黑'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    EasyLoading.show(status: '处理中...');
+
+    try {
+      // 调用 API 拉黑用户
+      await _apiService.blockUser(moment.userId.toString());
+      
+      // 更新本地黑名单
+      await _blockManager.blockUser(moment.userId.toString());
+
+      // 从列表移除该用户的所有动态
+      setState(() {
+        _moments.removeWhere((m) => m.userId == moment.userId);
+      });
+
+      EasyLoading.showSuccess('已拉黑');
+    } catch (e) {
+      EasyLoading.showError('操作失败: $e');
+    }
   }
 
   @override

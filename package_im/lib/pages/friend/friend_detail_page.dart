@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
+import '../../utils/block_manager.dart';
 import '../chat/chat_page.dart';
 
 /// 好友详情页面
@@ -22,15 +23,28 @@ class FriendDetailPage extends StatefulWidget {
 class _FriendDetailPageState extends State<FriendDetailPage> {
   final _apiService = ApiService();
   final _remarkService = RemarkService();
+  final _blockManager = BlockManager();
   User? _detailedFriend;
   bool _isLoading = true;
   String? _remark; // 好友备注
+  bool _isBlocked = false; // 是否已拉黑
 
   @override
   void initState() {
     super.initState();
     _loadUserDetail();
     _loadRemark();
+    _checkBlockStatus();
+  }
+
+  /// 检查拉黑状态
+  Future<void> _checkBlockStatus() async {
+    final isBlocked = await _blockManager.isBlocked(widget.friend.id.toString());
+    if (mounted) {
+      setState(() {
+        _isBlocked = isBlocked;
+      });
+    }
   }
 
   /// 加载备注
@@ -94,6 +108,10 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
                 _showDeleteDialog();
               } else if (value == 'remark') {
                 _showRemarkDialog();
+              } else if (value == 'block') {
+                _handleBlockUser();
+              } else if (value == 'unblock') {
+                _handleUnblockUser();
               }
             },
             itemBuilder: (context) => [
@@ -104,6 +122,25 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
                     Icon(Icons.edit_outlined, size: 20),
                     SizedBox(width: 8),
                     Text('设置备注'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: _isBlocked ? 'unblock' : 'block',
+                child: Row(
+                  children: [
+                    Icon(
+                      _isBlocked ? Icons.check_circle_outline : Icons.block_outlined,
+                      size: 20,
+                      color: _isBlocked ? Colors.green : Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isBlocked ? '解除拉黑' : '拉黑',
+                      style: TextStyle(
+                        color: _isBlocked ? Colors.green : Colors.orange,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -651,6 +688,111 @@ class _FriendDetailPageState extends State<FriendDetailPage> {
       }
     } catch (e) {
       EasyLoading.showError('删除失败: $e');
+    }
+  }
+
+  /// 拉黑用户
+  Future<void> _handleBlockUser() async {
+    final displayName = _currentFriend.nickname.isNotEmpty
+        ? _currentFriend.nickname
+        : _currentFriend.username;
+
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('拉黑用户'),
+        content: Text('确定要拉黑"$displayName"吗？\n\n拉黑后：\n• 无法查看对方动态\n• 无法收到对方消息\n• 将从好友列表移除'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
+            child: const Text('拉黑'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    EasyLoading.show(status: '处理中...');
+
+    try {
+      // 调用 API 拉黑用户
+      await _apiService.blockUser(widget.friend.id.toString());
+      
+      // 更新本地黑名单
+      await _blockManager.blockUser(widget.friend.id.toString());
+
+      setState(() {
+        _isBlocked = true;
+      });
+
+      EasyLoading.showSuccess('已拉黑');
+
+      // 延迟返回上一页
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      });
+    } catch (e) {
+      EasyLoading.showError('操作失败: $e');
+    }
+  }
+
+  /// 解除拉黑
+  Future<void> _handleUnblockUser() async {
+    final displayName = _currentFriend.nickname.isNotEmpty
+        ? _currentFriend.nickname
+        : _currentFriend.username;
+
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('解除拉黑'),
+        content: Text('确定要解除对"$displayName"的拉黑吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.green,
+            ),
+            child: const Text('解除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    EasyLoading.show(status: '处理中...');
+
+    try {
+      // 调用 API 解除拉黑
+      await _apiService.unblockUser(widget.friend.id.toString());
+      
+      // 更新本地黑名单
+      await _blockManager.unblockUser(widget.friend.id.toString());
+
+      setState(() {
+        _isBlocked = false;
+      });
+
+      EasyLoading.showSuccess('已解除拉黑');
+    } catch (e) {
+      EasyLoading.showError('操作失败: $e');
     }
   }
 

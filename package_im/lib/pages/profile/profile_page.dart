@@ -9,6 +9,7 @@ import '../login/agreement_page.dart';
 import 'feedback_page.dart';
 import 'my_following_page.dart';
 import 'my_followers_page.dart';
+import 'blocked_users_page.dart';
 
 /// 个人信息页面
 class ProfilePage extends StatefulWidget {
@@ -357,6 +358,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: '用户协议',
                     content: AgreementPage.userContent,
                   ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 56),
+          _buildSettingItem(
+            icon: Icons.block_outlined,
+            title: '黑名单',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const BlockedUsersPage(),
                 ),
               );
             },

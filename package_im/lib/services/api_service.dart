@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../models/login_response.dart';
 import '../models/message.dart';
 import '../models/chat_conversation.dart';
+import '../models/blacklist_item.dart';
 import '../utils/storage_manager.dart';
 
 /// API服务类
@@ -1493,6 +1494,60 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('处理 WebSocket 消息失败: $e');
+    }
+  }
+
+  // ==================== 黑名单管理 API ====================
+
+  /// 拉黑用户
+  /// [userId] 要拉黑的用户ID
+  /// [reason] 拉黑原因（可选）
+  Future<void> blockUser(String userId, {String? reason}) async {
+    await _httpManager.post('/api/blacklist/block', data: {
+      'blockedUserId': int.parse(userId),
+      'reason': reason ?? '',
+    });
+  }
+
+  /// 解除拉黑
+  Future<void> unblockUser(String userId) async {
+    await _httpManager.delete('/api/blacklist/unblock/$userId');
+  }
+
+  /// 获取黑名单列表（分页）
+  Future<BlacklistResponse> getBlockedUsers({int page = 0, int size = 10}) async {
+    final response = await _httpManager.get('/api/blacklist/list?page=$page&size=$size');
+    if (response.success && response.data != null) {
+      return BlacklistResponse.fromJson(response.data);
+    }
+    throw Exception('获取黑名单失败');
+  }
+
+  /// 获取黑名单用户ID列表（仅ID）
+  Future<List<String>> getBlockedUserIds() async {
+    try {
+      // 获取第一页黑名单，获取所有ID
+      final response = await _httpManager.get('/blacklist/list?page=0&size=1000');
+      if (response.success && response.data != null) {
+        final blacklistResponse = BlacklistResponse.fromJson(response.data);
+        return blacklistResponse.blacklist
+            .map((item) => item.blockedUserId.toString())
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('获取黑名单ID列表失败: $e');
+      return [];
+    }
+  }
+
+  /// 检查用户是否被拉黑
+  Future<bool> isUserBlocked(String userId) async {
+    try {
+      final ids = await getBlockedUserIds();
+      return ids.contains(userId);
+    } catch (e) {
+      return false;
     }
   }
 }

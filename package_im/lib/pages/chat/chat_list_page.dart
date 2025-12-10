@@ -8,6 +8,7 @@ import '../../models/user.dart';
 import '../../models/message.dart';
 import '../../services/api_service.dart';
 import '../../services/remark_service.dart';
+import '../../utils/block_manager.dart';
 import 'chat_page.dart';
 
 /// 聊天列表页面
@@ -23,6 +24,7 @@ class _ChatListPageState extends State<ChatListPage> {
   bool _isLoading = false;
   final _apiService = ApiService();
   final _remarkService = RemarkService();
+  final _blockManager = BlockManager();
   Timer? _refreshTimer;  // 定时刷新定时器
 
   @override
@@ -52,7 +54,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
   /// 启动自动刷新定时器
   void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 80), (timer) {
       if (mounted) {
         debugPrint('🔄 [ChatListPage] 定时静默刷新会话列表');
         _silentRefresh(); // 使用静默刷新，避免闪烁
@@ -90,12 +92,20 @@ class _ChatListPageState extends State<ChatListPage> {
     });
 
     try {
+      // 初始化黑名单管理器
+      await _blockManager.init();
+      
       // 调用API获取会话列表
       final response = await _apiService.getConversationList();
 
       if (response.success && response.data != null) {
+        // 过滤掉被拉黑用户的会话
+        final filteredConversations = response.data!
+            .where((conv) => !_blockManager.isBlockedSync(conv.targetId))
+            .toList();
+        
         setState(() {
-          _conversationList = response.data!;
+          _conversationList = filteredConversations;
           _sortConversationList();
         });
       } else {
@@ -115,12 +125,20 @@ class _ChatListPageState extends State<ChatListPage> {
   /// 静默刷新会话列表（不显示加载状态，避免闪烁）
   Future<void> _silentRefresh() async {
     try {
+      // 初始化黑名单管理器
+      await _blockManager.init();
+      
       // 调用API获取会话列表
       final response = await _apiService.getConversationList();
 
       if (response.success && response.data != null) {
+        // 过滤掉被拉黑用户的会话
+        final filteredConversations = response.data!
+            .where((conv) => !_blockManager.isBlockedSync(conv.targetId))
+            .toList();
+        
         setState(() {
-          _conversationList = response.data!;
+          _conversationList = filteredConversations;
           _sortConversationList();
         });
       }
@@ -480,9 +498,11 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ],
         ),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          leading: Stack(
+        child: InkWell(
+          onLongPress: () => _showConversationMenu(conversation),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            leading: Stack(
           children: [
             conversation.targetAvatarUrl != null
                 ? ClipRRect(
@@ -694,6 +714,7 @@ class _ChatListPageState extends State<ChatListPage> {
             _loadConversationList();
           });
         },
+          ),
         ),
       ),
     );
@@ -771,6 +792,182 @@ class _ChatListPageState extends State<ChatListPage> {
     } else {
       // 更早，显示日期
       return '${time.month}/${time.day}';
+    }
+  }
+
+  /// 显示会话菜单
+  void _showConversationMenu(ChatConversation conversation) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 顶部指示条
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 用户信息
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundImage: conversation.targetAvatarUrl != null
+                          ? NetworkImage(conversation.targetAvatarUrl!)
+                          : null,
+                      child: conversation.targetAvatarUrl == null
+                          ? Text(
+                              conversation.targetName.isNotEmpty
+                                  ? conversation.targetName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(fontSize: 20),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        conversation.targetName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // 菜单项
+              ListTile(
+                leading: Icon(
+                  Icons.block_outlined,
+                  color: Colors.orange[700],
+                ),
+                title: Text(
+                  '拉黑该用户',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _blockUserFromConversation(conversation);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                ),
+                title: const Text(
+                  '删除会话',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteConversation(conversation);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 从会话拉黑用户
+  Future<void> _blockUserFromConversation(ChatConversation conversation) async {
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('拉黑用户'),
+        content: Text(
+          '确定要拉黑"${conversation.targetName}"吗？\n\n拉黑后：\n• 无法查看对方动态\n• 无法收到对方消息\n• 将从好友列表移除',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
+            child: const Text('拉黑'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    EasyLoading.show(status: '处理中...');
+
+    try {
+      // 调用 API 拉黑用户
+      await _apiService.blockUser(conversation.targetId);
+      
+      // 更新本地黑名单
+      await _blockManager.blockUser(conversation.targetId);
+
+      // 删除会话
+      setState(() {
+        _conversationList.removeWhere((c) => c.id == conversation.id);
+      });
+
+      EasyLoading.showSuccess('已拉黑');
+    } catch (e) {
+      EasyLoading.showError('操作失败: $e');
+    }
+  }
+
+  /// 确认删除会话
+  Future<void> _confirmDeleteConversation(ChatConversation conversation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除会话'),
+        content: Text('确定要删除与"${conversation.targetName}"的聊天吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              '删除',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _deleteConversation(conversation);
     }
   }
 }
